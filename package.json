@@ -1,0 +1,17 @@
+{
+  "name": "2026-11-24-build-a-new-minimalist-site-548c8a8c",
+  "version": "1.0.0",
+  "description": "A minimalist three-word acronym generator celebrating **MCP's 2nd Birthday** (Nov 25, 2024 — Nov 25, 2026), inspired by the classic `npm-expansions` tradition.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "playwright-core": "^1.65.1",
+    "three": "^0.187.0"
+  }
+}
