@@ -71,6 +71,13 @@ export const INSTRUMENTS = [
     cue: 'Squeeze trigger or press Space',
     modulePath: './instruments/dymo-embosser.js',
   },
+  {
+    id: 'combination-lock',
+    number: '11',
+    title: 'Combination Lock',
+    cue: 'Spin tumblers or press Space',
+    modulePath: './instruments/combination-lock.js',
+  },
 ];
 
 export function findInstrumentIndex(id) {

@@ -131,6 +131,19 @@ function svgDiagramFor(instrumentId) {
           <text x="150" y="63" font-size="9" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">C |</text>
           <text x="150" y="88" font-size="9" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">P |</text>
         </svg>`;
+    case 'combination-lock':
+      return `
+        <svg class="fallback-diagram" viewBox="0 0 320 120" fill="none" stroke="currentColor" aria-hidden="true">
+          <rect x="44" y="30" width="24" height="60" rx="5" stroke-width="1.5"/>
+          <rect x="74" y="26" width="44" height="68" rx="4" stroke-width="1.4"/>
+          <rect x="124" y="26" width="44" height="68" rx="4" stroke-width="1.4"/>
+          <rect x="174" y="26" width="44" height="68" rx="4" stroke-width="1.4"/>
+          <rect x="224" y="30" width="24" height="60" rx="5" stroke-width="1.5"/>
+          <path d="M248 42 H276 A18 18 0 0 1 276 78 H248" stroke-width="3" opacity="0.7"/>
+          <text x="96" y="64" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">M</text>
+          <text x="146" y="64" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">C</text>
+          <text x="196" y="64" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">P</text>
+        </svg>`;
     default:
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 100" fill="none" stroke="currentColor" aria-hidden="true">
