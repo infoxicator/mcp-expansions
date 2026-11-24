@@ -44,6 +44,14 @@ function svgDiagramFor(instrumentId) {
           <line x1="110" y1="101" x2="202" y2="101" stroke-width="1" opacity="0.45"/>
           <line x1="110" y1="113" x2="188" y2="113" stroke-width="1" opacity="0.45"/>
         </svg>`;
+    case 'jacket-legend':
+      return `
+        <svg class="fallback-diagram" viewBox="0 0 320 110" fill="none" stroke="currentColor" aria-hidden="true">
+          <rect x="22" y="45" width="38" height="20" rx="4" stroke-width="1.4" opacity="0.7"/>
+          <rect x="260" y="45" width="38" height="20" rx="4" stroke-width="1.4" opacity="0.7"/>
+          <rect x="60" y="49" width="200" height="12" rx="6" stroke-width="1.6"/>
+          <text x="160" y="58" text-anchor="middle" font-size="8" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">AWM 2725 · M · C · P</text>
+        </svg>`;
     default:
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 100" fill="none" stroke="currentColor" aria-hidden="true">

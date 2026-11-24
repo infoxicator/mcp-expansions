@@ -22,6 +22,13 @@ export const INSTRUMENTS = [
     cue: 'Turn crank or press Space',
     modulePath: './instruments/cipher-machine.js',
   },
+  {
+    id: 'jacket-legend',
+    number: '04',
+    title: 'Jacket Legend',
+    cue: 'Pull cable taut or press Space',
+    modulePath: './instruments/jacket-legend.js',
+  },
 ];
 
 export function findInstrumentIndex(id) {
