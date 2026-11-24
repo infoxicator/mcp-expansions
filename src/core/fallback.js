@@ -29,6 +29,21 @@ function svgDiagramFor(instrumentId) {
           <rect x="222" y="48" width="26" height="24" rx="5" stroke-width="1.4" opacity="0.6"/>
           <line x1="248" y1="60" x2="310" y2="60" stroke-width="3" opacity="0.45"/>
         </svg>`;
+    case 'cipher-machine':
+      return `
+        <svg class="fallback-diagram" viewBox="0 0 320 140" fill="none" stroke="currentColor" aria-hidden="true">
+          <rect x="64" y="18" width="184" height="68" rx="8" stroke-width="1.6"/>
+          <rect x="92" y="28" width="26" height="40" rx="3" stroke-width="1.2" opacity="0.7"/>
+          <rect x="143" y="28" width="26" height="40" rx="3" stroke-width="1.2" opacity="0.7"/>
+          <rect x="194" y="28" width="26" height="40" rx="3" stroke-width="1.2" opacity="0.7"/>
+          <text x="105" y="52" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">M</text>
+          <text x="156" y="52" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">C</text>
+          <text x="207" y="52" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">P</text>
+          <path d="M248 52 H274 V26 H286" stroke-width="2" opacity="0.65"/>
+          <rect x="96" y="86" width="120" height="40" stroke-width="1.2" opacity="0.6"/>
+          <line x1="110" y1="101" x2="202" y2="101" stroke-width="1" opacity="0.45"/>
+          <line x1="110" y1="113" x2="188" y2="113" stroke-width="1" opacity="0.45"/>
+        </svg>`;
     default:
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 100" fill="none" stroke="currentColor" aria-hidden="true">

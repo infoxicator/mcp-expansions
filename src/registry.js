@@ -15,6 +15,13 @@ export const INSTRUMENTS = [
     cue: 'Plug in cable or press Space',
     modulePath: './instruments/the-contract.js',
   },
+  {
+    id: 'cipher-machine',
+    number: '03',
+    title: 'Cipher Machine',
+    cue: 'Turn crank or press Space',
+    modulePath: './instruments/cipher-machine.js',
+  },
 ];
 
 export function findInstrumentIndex(id) {
