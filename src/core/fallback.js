@@ -107,6 +107,18 @@ function svgDiagramFor(instrumentId) {
           <text x="58" y="74" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">C</text>
           <text x="58" y="104" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">P</text>
         </svg>`;
+    case 'letterpress-lockup':
+      return `
+        <svg class="fallback-diagram" viewBox="0 0 320 136" fill="none" stroke="currentColor" aria-hidden="true">
+          <rect x="44" y="16" width="102" height="104" rx="4" stroke-width="2"/>
+          <rect x="64" y="42" width="52" height="14" stroke-width="1.2" opacity="0.7"/>
+          <rect x="64" y="61" width="52" height="14" stroke-width="1.2" opacity="0.7"/>
+          <rect x="64" y="80" width="52" height="14" stroke-width="1.2" opacity="0.7"/>
+          <rect x="174" y="16" width="102" height="104" rx="2" stroke-width="1.4" opacity="0.75"/>
+          <text x="225" y="54" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="Instrument Serif, Georgia, serif">M · C · P</text>
+          <line x1="192" y1="74" x2="258" y2="74" stroke-width="1" opacity="0.4"/>
+          <line x1="192" y1="88" x2="246" y2="88" stroke-width="1" opacity="0.4"/>
+        </svg>`;
     default:
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 100" fill="none" stroke="currentColor" aria-hidden="true">

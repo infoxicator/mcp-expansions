@@ -57,6 +57,13 @@ export const INSTRUMENTS = [
     cue: 'Click board or press Space',
     modulePath: './instruments/destination-blind.js',
   },
+  {
+    id: 'letterpress-lockup',
+    number: '09',
+    title: 'Letterpress Lockup',
+    cue: 'Pull proof or press Space',
+    modulePath: './instruments/letterpress-lockup.js',
+  },
 ];
 
 export function findInstrumentIndex(id) {
