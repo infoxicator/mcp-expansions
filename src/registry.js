@@ -50,6 +50,13 @@ export const INSTRUMENTS = [
     cue: 'Pick a cable or press Space',
     modulePath: './instruments/specimen-drawer.js',
   },
+  {
+    id: 'destination-blind',
+    number: '08',
+    title: 'Destination Blind',
+    cue: 'Click board or press Space',
+    modulePath: './instruments/destination-blind.js',
+  },
 ];
 
 export function findInstrumentIndex(id) {

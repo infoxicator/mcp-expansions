@@ -93,6 +93,20 @@ function svgDiagramFor(instrumentId) {
           <line x1="34" y1="80" x2="286" y2="80" stroke-width="1.2" opacity="0.6"/>
           <text x="160" y="101" text-anchor="middle" font-size="9.5" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">SPEC 03 · LIVE · M · C · P</text>
         </svg>`;
+    case 'destination-blind':
+      return `
+        <svg class="fallback-diagram" viewBox="0 0 320 136" fill="none" stroke="currentColor" aria-hidden="true">
+          <rect x="42" y="14" width="236" height="108" rx="6" stroke-width="1.6"/>
+          <rect x="76" y="28" width="186" height="24" rx="2" stroke-width="1.2" opacity="0.7"/>
+          <line x1="76" y1="40" x2="262" y2="40" stroke-width="1" opacity="0.5"/>
+          <rect x="76" y="58" width="186" height="24" rx="2" stroke-width="1.2" opacity="0.7"/>
+          <line x1="76" y1="70" x2="262" y2="70" stroke-width="1" opacity="0.5"/>
+          <rect x="76" y="88" width="186" height="24" rx="2" stroke-width="1.2" opacity="0.7"/>
+          <line x1="76" y1="100" x2="262" y2="100" stroke-width="1" opacity="0.5"/>
+          <text x="58" y="44" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">M</text>
+          <text x="58" y="74" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">C</text>
+          <text x="58" y="104" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">P</text>
+        </svg>`;
     default:
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 100" fill="none" stroke="currentColor" aria-hidden="true">
