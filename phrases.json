@@ -1,0 +1,386 @@
+[
+  {
+    "id": "more-cake-please",
+    "words": ["More", "Cake,", "Please"],
+    "note": "Official birthday transport specification for November 25.",
+    "category": "birthday"
+  },
+  {
+    "id": "manual-copy-paste",
+    "words": ["Manual", "Copy", "Paste"],
+    "note": "The original zero-dependency context integration layer.",
+    "category": "protocol"
+  },
+  {
+    "id": "mostly-context-problems",
+    "words": ["Mostly", "Context", "Problems"],
+    "note": "Ninety percent of debugging, distilled into three words.",
+    "category": "protocol"
+  },
+  {
+    "id": "mandatory-coffee-protocol",
+    "words": ["Mandatory", "Coffee", "Protocol"],
+    "note": "Handshake must complete before any 9:00 AM standup.",
+    "category": "dev"
+  },
+  {
+    "id": "mischievous-capybara-parliament",
+    "words": ["Mischievous", "Capybara", "Parliament"],
+    "note": "Unanimously ratified in serene hot-spring silence.",
+    "category": "absurd"
+  },
+  {
+    "id": "many-candles-pending",
+    "words": ["Many", "Candles", "Pending"],
+    "note": "Two on the cake so far; context window still expanding.",
+    "category": "birthday"
+  },
+  {
+    "id": "maximum-context-panic",
+    "words": ["Maximum", "Context", "Panic"],
+    "note": "Automatically triggered at 99.4% of the token budget.",
+    "category": "protocol"
+  },
+  {
+    "id": "mildly-caffeinated-pigeons",
+    "words": ["Mildly", "Caffeinated", "Pigeons"],
+    "note": "RFC 1149, now with structured JSON-RPC tool schemas.",
+    "category": "absurd"
+  },
+  {
+    "id": "missing-config-path",
+    "words": ["Missing", "Config", "Path"],
+    "note": "Works cleanly on my laptop, refuses to boot on yours.",
+    "category": "dev"
+  },
+  {
+    "id": "make-claude-proud",
+    "words": ["Make", "Claude", "Proud"],
+    "note": "Aspirational system prompt, rarely verified in staging.",
+    "category": "dev"
+  },
+  {
+    "id": "mandatory-celebration-protocol",
+    "words": ["Mandatory", "Celebration", "Protocol"],
+    "note": "Status 200 OK: second-birthday slice required.",
+    "category": "birthday"
+  },
+  {
+    "id": "majestic-croissant-physics",
+    "words": ["Majestic", "Croissant", "Physics"],
+    "note": "Flaky by design, unexpectedly buttery in production.",
+    "category": "absurd"
+  },
+  {
+    "id": "mildly-confused-prompts",
+    "words": ["Mildly", "Confused", "Prompts"],
+    "note": "Somehow still parses into valid structured output.",
+    "category": "protocol"
+  },
+  {
+    "id": "more-context-probably",
+    "words": ["More", "Context,", "Probably"],
+    "note": "The universal architectural recommendation since 2024.",
+    "category": "protocol"
+  },
+  {
+    "id": "muffled-console-print",
+    "words": ["Muffled", "Console", "Print"],
+    "note": "Never write to stdout on a stdio server.",
+    "category": "dev"
+  },
+  {
+    "id": "monolithic-config-pile",
+    "words": ["Monolithic", "Config", "Pile"],
+    "note": "Four hundred lines of JSON just to check the weather.",
+    "category": "dev"
+  },
+  {
+    "id": "mostly-confetti-particles",
+    "words": ["Mostly", "Confetti", "Particles"],
+    "note": "Discovered inside every celebratory JSON-RPC frame.",
+    "category": "birthday"
+  },
+  {
+    "id": "modern-curl-packaging",
+    "words": ["Modern", "Curl", "Packaging"],
+    "note": "Wraps a single GET request in four typed schemas.",
+    "category": "protocol"
+  },
+  {
+    "id": "mechanical-cat-purring",
+    "words": ["Mechanical", "Cat", "Purring"],
+    "note": "Local background daemon humming steadily at 26 Hz.",
+    "category": "absurd"
+  },
+  {
+    "id": "mandatory-consent-popup",
+    "words": ["Mandatory", "Consent", "Popup"],
+    "note": "Allow this tiny tool to inspect your entire home folder?",
+    "category": "dev"
+  },
+  {
+    "id": "multiple-client-pandemonium",
+    "words": ["Multiple", "Client", "Pandemonium"],
+    "note": "Five editors fighting over one local stdio process.",
+    "category": "protocol"
+  },
+  {
+    "id": "my-computer-panicked",
+    "words": ["My", "Computer", "Panicked"],
+    "note": "Unhandled stderr emitted by an overly eager assistant.",
+    "category": "dev"
+  },
+  {
+    "id": "mysterious-cheese-provisioning",
+    "words": ["Mysterious", "Cheese", "Provisioning"],
+    "note": "Fetched via read-only resource URI cheese://aged-brie.",
+    "category": "absurd"
+  },
+  {
+    "id": "midnight-cake-procurement",
+    "words": ["Midnight", "Cake", "Procurement"],
+    "note": "Approved immediately with human-in-the-loop oversight.",
+    "category": "birthday"
+  },
+  {
+    "id": "microservice-cosplay-pattern",
+    "words": ["Microservice", "Cosplay", "Pattern"],
+    "note": "A twelve-line script wearing a very formal specification.",
+    "category": "protocol"
+  },
+  {
+    "id": "misplaced-comma-parser",
+    "words": ["Misplaced", "Comma", "Parser"],
+    "note": "Fatal syntax error at line 1, column 4,812.",
+    "category": "dev"
+  },
+  {
+    "id": "magic-context-pipe",
+    "words": ["Magic", "Context", "Pipe"],
+    "note": "Stdio goes in; miracles or stack traces come out.",
+    "category": "protocol"
+  },
+  {
+    "id": "musical-corgi-parade",
+    "words": ["Musical", "Corgi", "Parade"],
+    "note": "High-priority system interrupt; pause all queued tasks.",
+    "category": "absurd"
+  },
+  {
+    "id": "memory-cache-purged",
+    "words": ["Memory", "Cache", "Purged"],
+    "note": "Who are we, and what were we building five minutes ago?",
+    "category": "dev"
+  },
+  {
+    "id": "malformed-call-payload",
+    "words": ["Malformed", "Call", "Payload"],
+    "note": "Expected string, received mild existential dread.",
+    "category": "protocol"
+  },
+  {
+    "id": "make-confetti-pop",
+    "words": ["Make", "Confetti", "Pop"],
+    "note": "Unregistered birthday tool call with zero side effects.",
+    "category": "birthday"
+  },
+  {
+    "id": "miniature-cactus-preserve",
+    "words": ["Miniature", "Cactus", "Preserve"],
+    "note": "Thrives gracefully on neglect and occasional health pings.",
+    "category": "absurd"
+  },
+  {
+    "id": "mocked-capabilities-provider",
+    "words": ["Mocked", "Capabilities", "Provider"],
+    "note": "Hardcoded to return success during every keynote demo.",
+    "category": "dev"
+  },
+  {
+    "id": "massively-chained-prompts",
+    "words": ["Massively", "Chained", "Prompts"],
+    "note": "One question enters; forty-seven tool calls emerge.",
+    "category": "protocol"
+  },
+  {
+    "id": "mysterious-connection-pending",
+    "words": ["Mysterious", "Connection", "Pending"],
+    "note": "Have you tried restarting the host application twice?",
+    "category": "dev"
+  },
+  {
+    "id": "melancholy-cloud-percussion",
+    "words": ["Melancholy", "Cloud", "Percussion"],
+    "note": "Distant thunder heard during a slow container build.",
+    "category": "absurd"
+  },
+  {
+    "id": "maybe-check-permissions",
+    "words": ["Maybe", "Check", "Permissions"],
+    "note": "The quiet reason your filesystem tool sees nothing.",
+    "category": "dev"
+  },
+  {
+    "id": "mostly-correct-predictions",
+    "words": ["Mostly", "Correct", "Predictions"],
+    "note": "Technically passing every benchmark that was run today.",
+    "category": "protocol"
+  },
+  {
+    "id": "moonlit-coffee-pilgrimage",
+    "words": ["Moonlit", "Coffee", "Pilgrimage"],
+    "note": "Required ritual before touching a Friday release.",
+    "category": "absurd"
+  },
+  {
+    "id": "meticulously-crafted-prompts",
+    "words": ["Meticulously", "Crafted", "Prompts"],
+    "note": "Three careful paragraphs just to ask for brevity.",
+    "category": "dev"
+  },
+  {
+    "id": "many-contexts-pending",
+    "words": ["Many", "Contexts", "Pending"],
+    "note": "An MCP server querying another MCP server in peace.",
+    "category": "protocol"
+  },
+  {
+    "id": "missing-credentials-please",
+    "words": ["Missing", "Credentials,", "Please"],
+    "note": "Export your environment variable and try once more.",
+    "category": "dev"
+  },
+  {
+    "id": "mighty-cardigan-protection",
+    "words": ["Mighty", "Cardigan", "Protection"],
+    "note": "Thermal transport layer for overly chilled offices.",
+    "category": "absurd"
+  },
+  {
+    "id": "minimalist-command-proxy",
+    "words": ["Minimalist", "Command", "Proxy"],
+    "note": "What the README earnestly promised on commit one.",
+    "category": "protocol"
+  },
+  {
+    "id": "midnight-coding-patch",
+    "words": ["Midnight", "Coding", "Patch"],
+    "note": "Shipped with zero unit tests and boundless optimism.",
+    "category": "dev"
+  },
+  {
+    "id": "modest-cucumber-philosophy",
+    "words": ["Modest", "Cucumber", "Philosophy"],
+    "note": "Remain calm and crisp under heavy token throughput.",
+    "category": "absurd"
+  },
+  {
+    "id": "managed-chaos-platform",
+    "words": ["Managed", "Chaos", "Platform"],
+    "note": "Declared enterprise-ready since version 0.1.0-alpha.",
+    "category": "protocol"
+  },
+  {
+    "id": "model-context-pretzels",
+    "words": ["Model", "Context", "Pretzels"],
+    "note": "Twisted schemas, lightly salted, best served warm.",
+    "category": "birthday"
+  },
+  {
+    "id": "meaningless-configuration-parameters",
+    "words": ["Meaningless", "Configuration", "Parameters"],
+    "note": "Retained strictly for sentimental backwards compatibility.",
+    "category": "dev"
+  },
+  {
+    "id": "magnificent-cardboard-prototype",
+    "words": ["Magnificent", "Cardboard", "Prototype"],
+    "note": "Surprisingly load-bearing in executive architecture reviews.",
+    "category": "absurd"
+  },
+  {
+    "id": "miraculous-code-plumbing",
+    "words": ["Miraculous", "Code", "Plumbing"],
+    "note": "Connecting everything to everything without leaks, mostly.",
+    "category": "protocol"
+  },
+  {
+    "id": "mystery-callback-pipeline",
+    "words": ["Mystery", "Callback", "Pipeline"],
+    "note": "Nobody remembers who registered this handler or why.",
+    "category": "dev"
+  },
+  {
+    "id": "magnetic-cereal-portal",
+    "words": ["Magnetic", "Cereal", "Portal"],
+    "note": "Breakfast streaming over server-sent events.",
+    "category": "absurd"
+  },
+  {
+    "id": "mutable-context-playground",
+    "words": ["Mutable", "Context", "Playground"],
+    "note": "State synchronization left kindly as an exercise.",
+    "category": "protocol"
+  },
+  {
+    "id": "mythical-crisp-pancakes",
+    "words": ["Mythical", "Crisp", "Pancakes"],
+    "note": "Reproducible only on quiet Sunday mornings.",
+    "category": "absurd"
+  },
+  {
+    "id": "mildly-chaotic-pipelines",
+    "words": ["Mildly", "Chaotic", "Pipelines"],
+    "note": "Deterministic in the spec, improvisational in prod.",
+    "category": "protocol"
+  },
+  {
+    "id": "mellow-coastal-pelicans",
+    "words": ["Mellow", "Coastal", "Pelicans"],
+    "note": "Migrating south in search of lower tail latency.",
+    "category": "absurd"
+  },
+  {
+    "id": "model-capability-parade",
+    "words": ["Model", "Capability", "Parade"],
+    "note": "Every week a new server, every afternoon a new demo.",
+    "category": "birthday"
+  },
+  {
+    "id": "mysterious-chinchilla-postcards",
+    "words": ["Mysterious", "Chinchilla", "Postcards"],
+    "note": "Delivered asynchronously from an undisclosed mountain pass.",
+    "category": "absurd"
+  },
+  {
+    "id": "messy-claude-plugins",
+    "words": ["Messy", "Claude", "Plugins"],
+    "note": "Lovingly cobbled together since November 2024.",
+    "category": "dev"
+  },
+  {
+    "id": "meticulous-cloud-poodles",
+    "words": ["Meticulous", "Cloud", "Poodles"],
+    "note": "Groomed daily by strict pre-commit lint rules.",
+    "category": "absurd"
+  },
+  {
+    "id": "midnight-croissant-protocol",
+    "words": ["Midnight", "Croissant", "Protocol"],
+    "note": "Warm, flaky, and strictly schema-validated.",
+    "category": "birthday"
+  },
+  {
+    "id": "muted-ceramic-pottery",
+    "words": ["Muted", "Ceramic", "Pottery"],
+    "note": "The quiet aesthetic philosophy behind this very page.",
+    "category": "absurd"
+  },
+  {
+    "id": "model-context-protocol",
+    "words": ["Model", "Context", "Protocol"],
+    "note": "Fine, okay — just this once, the actual name.",
+    "category": "protocol"
+  }
+]

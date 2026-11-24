@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MCP — Three-Word Acronym Generator</title>
+  <meta name="description" content="A minimalist, rotating three-word M·C·P expansion generator celebrating MCP's second birthday. Inspired by npm-expansions." />
+  <meta property="og:title" content="MCP — Three-Word Acronym Generator" />
+  <meta property="og:description" content="More Cake, Please. A rotating collection of funny M·C·P expansions." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23141413'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-family='Georgia,serif' font-size='32' fill='%23F6F4EF'%3EM%3C/text%3E%3Ccircle cx='49' cy='17' r='4.5' fill='%23D94E28'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #F6F4EF;
+      --bg-elevated: #EFECE5;
+      --ink: #141413;
+      --ink-secondary: #58554F;
+      --ink-muted: #848078;
+      --rule: rgba(20, 20, 19, 0.11);
+      --rule-strong: rgba(20, 20, 19, 0.22);
+      --accent: #D94E28;
+      --accent-soft: rgba(217, 78, 40, 0.12);
+      --btn-bg: #141413;
+      --btn-fg: #F6F4EF;
+      --btn-hover: #2C2B29;
+      --ghost-hover: rgba(20, 20, 19, 0.055);
+      --drawer-bg: #F6F4EF;
+      --backdrop: rgba(20, 20, 19, 0.28);
+      --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+      color-scheme: light;
+    }
+
+    [data-theme="dark"] {
+      --bg: #111110;
+      --bg-elevated: #1A1918;
+      --ink: #F2EFE9;
+      --ink-secondary: #A6A29A;
+      --ink-muted: #726E66;
+      --rule: rgba(242, 239, 233, 0.11);
+      --rule-strong: rgba(242, 239, 233, 0.22);
+      --accent: #EB5E38;
+      --accent-soft: rgba(235, 94, 56, 0.16);
+      --btn-bg: #F2EFE9;
+      --btn-fg: #111110;
+      --btn-hover: #DDD8CE;
+      --ghost-hover: rgba(242, 239, 233, 0.07);
+      --drawer-bg: #141413;
+      --backdrop: rgba(0, 0, 0, 0.56);
+      color-scheme: dark;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background-color 280ms ease, color 280ms ease;
+      overflow-x: hidden;
+    }
+
+    /* Subtle archival paper grain */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.026;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      min-height: 100svh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    /* Header */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: clamp(20px, 3.2vw, 32px) clamp(20px, 5vw, 48px);
+      gap: 16px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+      user-select: none;
+    }
+
+    .brand-mark {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      color: var(--ink);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .brand-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .brand-sub {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-btn {
+      appearance: none;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--ink-secondary);
+      font-family: var(--mono);
+      font-size: 11.5px;
+      letter-spacing: 0.04em;
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+    }
+
+    .nav-btn:hover {
+      background: var(--ghost-hover);
+      color: var(--ink);
+    }
+
+    .nav-btn:focus-visible,
+    .btn-primary:focus-visible,
+    .btn-ghost:focus-visible,
+    .word-row:focus-visible,
+    .drawer-close:focus-visible,
+    .filter-pill:focus-visible,
+    .index-item:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      transition: background-color 200ms ease, opacity 200ms ease, transform 200ms ease;
+    }
+
+    .nav-btn[aria-pressed="false"] .status-dot {
+      background: var(--ink-muted);
+      opacity: 0.55;
+    }
+
+    .nav-btn.is-active-auto .status-dot {
+      animation: breathe 2.4s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.42; transform: scale(0.84); }
+    }
+
+    .count-pill {
+      color: var(--ink-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .icon-btn {
+      padding: 6px 8px;
+    }
+
+    .icon-btn svg {
+      width: 15px;
+      height: 15px;
+      display: block;
+    }
+
+    /* Main Stage */
+    .stage {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(16px, 4vh, 48px) clamp(20px, 5vw, 48px);
+    }
+
+    .specimen {
+      width: 100%;
+      max-width: 720px;
+    }
+
+    .meta-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 14px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .meta-index {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .meta-index.is-remix {
+      color: var(--accent);
+    }
+
+    .meta-category {
+      color: var(--ink-muted);
+    }
+
+    /* 3-Word Mechanical Reel */
+    .reel {
+      border-top: 1px solid var(--rule);
+      padding: clamp(24px, 4.4vh, 42px) 0 clamp(26px, 4.6vh, 44px);
+      display: flex;
+      flex-direction: column;
+      gap: clamp(2px, 0.8vh, 8px);
+    }
+
+    .word-row {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      width: 100%;
+      text-align: left;
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      align-items: center;
+      column-gap: clamp(14px, 2.8vw, 28px);
+      padding: 2px 0;
+      cursor: pointer;
+      color: inherit;
+      position: relative;
+      border-radius: 6px;
+    }
+
+    .word-rail {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 26px;
+      width: 26px;
+      border-radius: 5px;
+      border: 1px solid var(--rule);
+      background: transparent;
+      transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
+      user-select: none;
+    }
+
+    .word-row:hover .word-rail {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      transform: translateX(1px);
+    }
+
+    .word-viewport {
+      position: relative;
+      overflow: hidden;
+      height: 1.2em;
+      font-family: var(--serif);
+      font-size: clamp(2.9rem, 8.2vw, 5.9rem);
+      font-weight: 400;
+      line-height: 1.1;
+      letter-spacing: -0.024em;
+      display: flex;
+      align-items: center;
+    }
+
+    .word-viewport[data-scale="medium"] {
+      font-size: clamp(2.45rem, 7.2vw, 5.35rem);
+    }
+
+    .word-viewport[data-scale="compact"] {
+      font-size: clamp(2.05rem, 6.2vw, 4.75rem);
+    }
+
+    .word-text {
+      display: inline-block;
+      white-space: nowrap;
+      will-change: transform, opacity;
+      transform: translateY(0%);
+      opacity: 1;
+    }
+
+    .word-text.entering-up {
+      animation: enterFromBelow 460ms var(--ease-out-expo) both;
+    }
+
+    .word-text.entering-down {
+      animation: enterFromAbove 460ms var(--ease-out-expo) both;
+    }
+
+    .word-ghost {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      pointer-events: none;
+      will-change: transform, opacity;
+    }
+
+    .word-ghost.leaving-up {
+      animation: leaveToAbove 360ms var(--ease-out-expo) forwards;
+    }
+
+    .word-ghost.leaving-down {
+      animation: leaveToBelow 360ms var(--ease-out-expo) forwards;
+    }
+
+    @keyframes enterFromBelow {
+      0% { transform: translateY(104%); opacity: 0; }
+      100% { transform: translateY(0%); opacity: 1; }
+    }
+
+    @keyframes leaveToAbove {
+      0% { transform: translateY(0%); opacity: 1; }
+      100% { transform: translateY(-104%); opacity: 0; }
+    }
+
+    @keyframes enterFromAbove {
+      0% { transform: translateY(-104%); opacity: 0; }
+      100% { transform: translateY(0%); opacity: 1; }
+    }
+
+    @keyframes leaveToBelow {
+      0% { transform: translateY(0%); opacity: 1; }
+      100% { transform: translateY(104%); opacity: 0; }
+    }
+
+    .word-spin-hint {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      opacity: 0;
+      transform: translateX(-4px);
+      transition: opacity 180ms ease, transform 180ms ease;
+      padding-right: 4px;
+      user-select: none;
+    }
+
+    .word-row:hover .word-spin-hint {
+      opacity: 0.85;
+      transform: translateX(0);
+    }
+
+    /* Hairline Progress Track */
+    .progress-track {
+      position: relative;
+      width: 100%;
+      height: 1px;
+      background: var(--rule);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      position: absolute;
+      inset: 0;
+      background: var(--accent);
+      transform-origin: left center;
+      transform: scaleX(0);
+      opacity: 0.72;
+      will-change: transform;
+    }
+
+    /* Deadpan Footnote */
+    .footnote-wrap {
+      margin-top: 18px;
+      min-height: 24px;
+      display: flex;
+      align-items: center;
+    }
+
+    .footnote {
+      font-size: 14.5px;
+      color: var(--ink-secondary);
+      letter-spacing: -0.005em;
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .footnote.is-fading {
+      opacity: 0;
+      transform: translateY(3px);
+    }
+
+    /* Controls */
+    .controls {
+      margin-top: clamp(24px, 3.8vh, 36px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .controls-primary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .controls-secondary {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-primary {
+      appearance: none;
+      border: 1px solid transparent;
+      background: var(--btn-bg);
+      color: var(--btn-fg);
+      font-family: var(--sans);
+      font-size: 13.5px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      padding: 10px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: background-color 160ms ease, transform 120ms ease;
+    }
+
+    .btn-primary:hover {
+      background: var(--btn-hover);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary kbd {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.14);
+      color: inherit;
+      opacity: 0.85;
+    }
+
+    [data-theme="dark"] .btn-primary kbd {
+      background: rgba(0, 0, 0, 0.12);
+    }
+
+    .btn-ghost {
+      appearance: none;
+      border: 1px solid var(--rule);
+      background: transparent;
+      color: var(--ink-secondary);
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 400;
+      padding: 9px 13px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, transform 120ms ease;
+    }
+
+    .btn-ghost:hover {
+      background: var(--ghost-hover);
+      border-color: var(--rule-strong);
+      color: var(--ink);
+    }
+
+    .btn-ghost:active {
+      transform: scale(0.98);
+    }
+
+    .btn-ghost.is-confirmed {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-step {
+      padding: 9px 11px;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .btn-ghost svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* Footer */
+    .footbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px 24px;
+      padding: 18px clamp(20px, 5vw, 48px) clamp(20px, 3vw, 28px);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.03em;
+      color: var(--ink-muted);
+    }
+
+    .shortcuts {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .shortcut-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .shortcut-item kbd {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 1px 5px;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      color: var(--ink-secondary);
+    }
+
+    .colophon {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .colophon-sep {
+      opacity: 0.45;
+    }
+
+    /* Index Drawer */
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: var(--backdrop);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 40;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 240ms ease;
+    }
+
+    .drawer-backdrop.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(460px, 100vw);
+      background: var(--drawer-bg);
+      border-left: 1px solid var(--rule);
+      z-index: 50;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      transform: translateX(100%);
+      transition: transform 320ms var(--ease-out-expo);
+    }
+
+    .drawer.is-open {
+      transform: translateX(0);
+    }
+
+    .drawer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .drawer-title {
+      font-family: var(--serif);
+      font-size: 26px;
+      font-weight: 400;
+      letter-spacing: -0.015em;
+      line-height: 1;
+    }
+
+    .drawer-close {
+      appearance: none;
+      background: transparent;
+      border: 1px solid var(--rule);
+      color: var(--ink-secondary);
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background-color 150ms ease, color 150ms ease;
+    }
+
+    .drawer-close:hover {
+      background: var(--ghost-hover);
+      color: var(--ink);
+    }
+
+    .drawer-toolbar {
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--rule);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .search-input {
+      width: 100%;
+      appearance: none;
+      background: var(--bg-elevated);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 13.5px;
+      outline: none;
+      transition: border-color 160ms ease;
+    }
+
+    .search-input::placeholder {
+      color: var(--ink-muted);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      appearance: none;
+      background: transparent;
+      border: 1px solid var(--rule);
+      color: var(--ink-secondary);
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+    }
+
+    .filter-pill:hover {
+      color: var(--ink);
+      border-color: var(--rule-strong);
+    }
+
+    .filter-pill[aria-pressed="true"] {
+      background: var(--btn-bg);
+      color: var(--btn-fg);
+      border-color: transparent;
+    }
+
+    .drawer-list {
+      overflow-y: auto;
+      padding: 8px 12px;
+    }
+
+    .index-item {
+      appearance: none;
+      width: 100%;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: left;
+      cursor: pointer;
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 4px 10px;
+      color: inherit;
+      transition: background-color 150ms ease;
+    }
+
+    .index-item:hover {
+      background: var(--ghost-hover);
+    }
+
+    .index-item.is-current {
+      background: var(--accent-soft);
+    }
+
+    .index-num {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-muted);
+      font-variant-numeric: tabular-nums;
+      padding-top: 4px;
+    }
+
+    .index-item.is-current .index-num {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .index-phrase {
+      font-family: var(--serif);
+      font-size: 22px;
+      line-height: 1.12;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+    }
+
+    .index-note {
+      grid-column: 2;
+      font-size: 12.5px;
+      color: var(--ink-muted);
+      line-height: 1.4;
+    }
+
+    .drawer-empty {
+      padding: 40px 24px;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink-muted);
+    }
+
+    .drawer-foot {
+      padding: 14px 24px;
+      border-top: 1px solid var(--rule);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .drawer-foot code {
+      font-family: var(--mono);
+      color: var(--ink-secondary);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 640px) {
+      .brand-sub {
+        display: none;
+      }
+
+      .word-row {
+        grid-template-columns: 26px 1fr;
+        column-gap: 14px;
+      }
+
+      .word-rail {
+        width: 24px;
+        height: 24px;
+        font-size: 11px;
+      }
+
+      .word-spin-hint {
+        display: none;
+      }
+
+      .shortcuts {
+        display: none;
+      }
+
+      .btn-primary kbd {
+        display: none;
+      }
+
+      .controls {
+        align-items: stretch;
+      }
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .word-text.entering-up,
+      .word-text.entering-down {
+        animation: gentleFadeIn 220ms ease both;
+      }
+      .word-ghost.leaving-up,
+      .word-ghost.leaving-down {
+        animation: gentleFadeOut 180ms ease forwards;
+      }
+      .nav-btn.is-active-auto .status-dot {
+        animation: none;
+      }
+      @keyframes gentleFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes gentleFadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a href="#top" class="brand" id="brandReset" title="Return to curated rotation">
+        <span class="brand-mark">
+          <span class="brand-dot" aria-hidden="true"></span>
+          MCP
+        </span>
+        <span class="brand-sub">Expansions · II</span>
+      </a>
+
+      <nav class="nav-actions" aria-label="Generator controls">
+        <button
+          type="button"
+          class="nav-btn is-active-auto"
+          id="autoToggle"
+          aria-pressed="true"
+          title="Toggle automatic rotation (P)"
+        >
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="autoLabel">Auto</span>
+        </button>
+
+        <button
+          type="button"
+          class="nav-btn"
+          id="indexToggle"
+          aria-expanded="false"
+          aria-controls="indexDrawer"
+          title="Browse all phrases (/)"
+        >
+          <span>Index</span>
+          <span class="count-pill" id="totalCount">64</span>
+        </button>
+
+        <button
+          type="button"
+          class="nav-btn icon-btn"
+          id="themeToggle"
+          aria-label="Toggle color theme"
+          title="Switch theme (T)"
+        >
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+        </button>
+      </nav>
+    </header>
+
+    <main class="stage">
+      <section class="specimen" id="specimen" aria-label="MCP three-word phrase generator">
+        <div class="meta-strip">
+          <span class="meta-index" id="metaIndex">NO. 001 / 064</span>
+          <span class="meta-category" id="metaCategory">BIRTHDAY</span>
+        </div>
+
+        <div class="reel" id="reel" role="region" aria-live="polite" aria-atomic="true">
+          <button type="button" class="word-row" data-slot="0" aria-label="Spin M word">
+            <span class="word-rail" aria-hidden="true">M</span>
+            <span class="word-viewport" id="viewport-0">
+              <span class="word-text" id="word-0">More</span>
+            </span>
+            <span class="word-spin-hint" aria-hidden="true">spin M</span>
+          </button>
+
+          <button type="button" class="word-row" data-slot="1" aria-label="Spin C word">
+            <span class="word-rail" aria-hidden="true">C</span>
+            <span class="word-viewport" id="viewport-1">
+              <span class="word-text" id="word-1">Cake,</span>
+            </span>
+            <span class="word-spin-hint" aria-hidden="true">spin C</span>
+          </button>
+
+          <button type="button" class="word-row" data-slot="2" aria-label="Spin P word">
+            <span class="word-rail" aria-hidden="true">P</span>
+            <span class="word-viewport" id="viewport-2">
+              <span class="word-text" id="word-2">Please</span>
+            </span>
+            <span class="word-spin-hint" aria-hidden="true">spin P</span>
+          </button>
+        </div>
+
+        <div class="progress-track" aria-hidden="true">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="footnote-wrap">
+          <p class="footnote" id="footnote">Official birthday transport specification for November 25.</p>
+        </div>
+
+        <div class="controls">
+          <div class="controls-primary">
+            <button type="button" class="btn-primary" id="rollBtn">
+              <span>Roll another</span>
+              <kbd>Space</kbd>
+            </button>
+            <button type="button" class="btn-ghost btn-step" id="prevBtn" aria-label="Previous phrase" title="Previous (Left Arrow)">←</button>
+            <button type="button" class="btn-ghost btn-step" id="nextBtn" aria-label="Next phrase" title="Next (Right Arrow)">→</button>
+          </div>
+
+          <div class="controls-secondary">
+            <button type="button" class="btn-ghost" id="copyBtn" title="Copy phrase (C)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span id="copyLabel">Copy</span>
+            </button>
+
+            <button type="button" class="btn-ghost" id="shareBtn" title="Copy shareable link (L)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+              </svg>
+              <span id="shareLabel">Link</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footbar">
+      <div class="shortcuts" aria-hidden="true">
+        <span class="shortcut-item"><kbd>Space</kbd> roll</span>
+        <span class="shortcut-item"><kbd>←</kbd><kbd>→</kbd> step</span>
+        <span class="shortcut-item"><kbd>P</kbd> pause</span>
+        <span class="shortcut-item"><kbd>/</kbd> index</span>
+        <span class="shortcut-item">click any word to remix</span>
+      </div>
+      <div class="colophon">
+        <span>MCP 2nd Birthday</span>
+        <span class="colophon-sep">·</span>
+        <span>Nov 25, 2026</span>
+        <span class="colophon-sep">·</span>
+        <span>Homage to npm-expansions</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Minimalist Index Drawer -->
+  <div class="drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
+  <aside class="drawer" id="indexDrawer" aria-label="All MCP expansions" aria-hidden="true">
+    <div class="drawer-head">
+      <h2 class="drawer-title">All Expansions</h2>
+      <button type="button" class="drawer-close" id="drawerClose">Esc</button>
+    </div>
+
+    <div class="drawer-toolbar">
+      <input
+        type="search"
+        class="search-input"
+        id="searchInput"
+        placeholder="Filter phrases or notes…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <div class="filter-row" role="group" aria-label="Filter by category">
+        <button type="button" class="filter-pill" data-cat="all" aria-pressed="true">All</button>
+        <button type="button" class="filter-pill" data-cat="birthday" aria-pressed="false">Birthday</button>
+        <button type="button" class="filter-pill" data-cat="protocol" aria-pressed="false">Protocol</button>
+        <button type="button" class="filter-pill" data-cat="dev" aria-pressed="false">Dev</button>
+        <button type="button" class="filter-pill" data-cat="absurd" aria-pressed="false">Absurd</button>
+      </div>
+    </div>
+
+    <div class="drawer-list" id="drawerList" role="list"></div>
+
+    <div class="drawer-foot">
+      <span>Community list in <code>phrases.json</code></span>
+      <span id="drawerShowing">64 entries</span>
+    </div>
+  </aside>
+
+  <script>
+    (() => {
+      const ROTATE_MS = 4800;
+      const CATEGORY_LABELS = {
+        birthday: "Birthday",
+        protocol: "Protocol",
+        dev: "Dev Life",
+        absurd: "Absurd",
+        remix: "Remix"
+      };
+
+      const FALLBACK_PHRASES = [
+        { id: "more-cake-please", words: ["More", "Cake,", "Please"], note: "Official birthday transport specification for November 25.", category: "birthday" },
+        { id: "manual-copy-paste", words: ["Manual", "Copy", "Paste"], note: "The original zero-dependency context integration layer.", category: "protocol" },
+        { id: "mostly-context-problems", words: ["Mostly", "Context", "Problems"], note: "Ninety percent of debugging, distilled into three words.", category: "protocol" },
+        { id: "mandatory-coffee-protocol", words: ["Mandatory", "Coffee", "Protocol"], note: "Handshake must complete before any 9:00 AM standup.", category: "dev" },
+        { id: "mischievous-capybara-parliament", words: ["Mischievous", "Capybara", "Parliament"], note: "Unanimously ratified in serene hot-spring silence.", category: "absurd" },
+        { id: "many-candles-pending", words: ["Many", "Candles", "Pending"], note: "Two on the cake so far; context window still expanding.", category: "birthday" },
+        { id: "maximum-context-panic", words: ["Maximum", "Context", "Panic"], note: "Automatically triggered at 99.4% of the token budget.", category: "protocol" },
+        { id: "mildly-caffeinated-pigeons", words: ["Mildly", "Caffeinated", "Pigeons"], note: "RFC 1149, now with structured JSON-RPC tool schemas.", category: "absurd" },
+        { id: "missing-config-path", words: ["Missing", "Config", "Path"], note: "Works cleanly on my laptop, refuses to boot on yours.", category: "dev" },
+        { id: "make-claude-proud", words: ["Make", "Claude", "Proud"], note: "Aspirational system prompt, rarely verified in staging.", category: "dev" },
+        { id: "mandatory-celebration-protocol", words: ["Mandatory", "Celebration", "Protocol"], note: "Status 200 OK: second-birthday slice required.", category: "birthday" },
+        { id: "majestic-croissant-physics", words: ["Majestic", "Croissant", "Physics"], note: "Flaky by design, unexpectedly buttery in production.", category: "absurd" },
+        { id: "mildly-confused-prompts", words: ["Mildly", "Confused", "Prompts"], note: "Somehow still parses into valid structured output.", category: "protocol" },
+        { id: "more-context-probably", words: ["More", "Context,", "Probably"], note: "The universal architectural recommendation since 2024.", category: "protocol" },
+        { id: "muffled-console-print", words: ["Muffled", "Console", "Print"], note: "Never write to stdout on a stdio server.", category: "dev" },
+        { id: "monolithic-config-pile", words: ["Monolithic", "Config", "Pile"], note: "Four hundred lines of JSON just to check the weather.", category: "dev" },
+        { id: "mostly-confetti-particles", words: ["Mostly", "Confetti", "Particles"], note: "Discovered inside every celebratory JSON-RPC frame.", category: "birthday" },
+        { id: "modern-curl-packaging", words: ["Modern", "Curl", "Packaging"], note: "Wraps a single GET request in four typed schemas.", category: "protocol" },
+        { id: "mechanical-cat-purring", words: ["Mechanical", "Cat", "Purring"], note: "Local background daemon humming steadily at 26 Hz.", category: "absurd" },
+        { id: "mandatory-consent-popup", words: ["Mandatory", "Consent", "Popup"], note: "Allow this tiny tool to inspect your entire home folder?", category: "dev" },
+        { id: "multiple-client-pandemonium", words: ["Multiple", "Client", "Pandemonium"], note: "Five editors fighting over one local stdio process.", category: "protocol" },
+        { id: "my-computer-panicked", words: ["My", "Computer", "Panicked"], note: "Unhandled stderr emitted by an overly eager assistant.", category: "dev" },
+        { id: "mysterious-cheese-provisioning", words: ["Mysterious", "Cheese", "Provisioning"], note: "Fetched via read-only resource URI cheese://aged-brie.", category: "absurd" },
+        { id: "midnight-cake-procurement", words: ["Midnight", "Cake", "Procurement"], note: "Approved immediately with human-in-the-loop oversight.", category: "birthday" },
+        { id: "microservice-cosplay-pattern", words: ["Microservice", "Cosplay", "Pattern"], note: "A twelve-line script wearing a very formal specification.", category: "protocol" },
+        { id: "misplaced-comma-parser", words: ["Misplaced", "Comma", "Parser"], note: "Fatal syntax error at line 1, column 4,812.", category: "dev" },
+        { id: "magic-context-pipe", words: ["Magic", "Context", "Pipe"], note: "Stdio goes in; miracles or stack traces come out.", category: "protocol" },
+        { id: "musical-corgi-parade", words: ["Musical", "Corgi", "Parade"], note: "High-priority system interrupt; pause all queued tasks.", category: "absurd" },
+        { id: "memory-cache-purged", words: ["Memory", "Cache", "Purged"], note: "Who are we, and what were we building five minutes ago?", category: "dev" },
+        { id: "malformed-call-payload", words: ["Malformed", "Call", "Payload"], note: "Expected string, received mild existential dread.", category: "protocol" },
+        { id: "make-confetti-pop", words: ["Make", "Confetti", "Pop"], note: "Unregistered birthday tool call with zero side effects.", category: "birthday" },
+        { id: "miniature-cactus-preserve", words: ["Miniature", "Cactus", "Preserve"], note: "Thrives gracefully on neglect and occasional health pings.", category: "absurd" },
+        { id: "mocked-capabilities-provider", words: ["Mocked", "Capabilities", "Provider"], note: "Hardcoded to return success during every keynote demo.", category: "dev" },
+        { id: "massively-chained-prompts", words: ["Massively", "Chained", "Prompts"], note: "One question enters; forty-seven tool calls emerge.", category: "protocol" },
+        { id: "mysterious-connection-pending", words: ["Mysterious", "Connection", "Pending"], note: "Have you tried restarting the host application twice?", category: "dev" },
+        { id: "melancholy-cloud-percussion", words: ["Melancholy", "Cloud", "Percussion"], note: "Distant thunder heard during a slow container build.", category: "absurd" },
+        { id: "maybe-check-permissions", words: ["Maybe", "Check", "Permissions"], note: "The quiet reason your filesystem tool sees nothing.", category: "dev" },
+        { id: "mostly-correct-predictions", words: ["Mostly", "Correct", "Predictions"], note: "Technically passing every benchmark that was run today.", category: "protocol" },
+        { id: "moonlit-coffee-pilgrimage", words: ["Moonlit", "Coffee", "Pilgrimage"], note: "Required ritual before touching a Friday release.", category: "absurd" },
+        { id: "meticulously-crafted-prompts", words: ["Meticulously", "Crafted", "Prompts"], note: "Three careful paragraphs just to ask for brevity.", category: "dev" },
+        { id: "many-contexts-pending", words: ["Many", "Contexts", "Pending"], note: "An MCP server querying another MCP server in peace.", category: "protocol" },
+        { id: "missing-credentials-please", words: ["Missing", "Credentials,", "Please"], note: "Export your environment variable and try once more.", category: "dev" },
+        { id: "mighty-cardigan-protection", words: ["Mighty", "Cardigan", "Protection"], note: "Thermal transport layer for overly chilled offices.", category: "absurd" },
+        { id: "minimalist-command-proxy", words: ["Minimalist", "Command", "Proxy"], note: "What the README earnestly promised on commit one.", category: "protocol" },
+        { id: "midnight-coding-patch", words: ["Midnight", "Coding", "Patch"], note: "Shipped with zero unit tests and boundless optimism.", category: "dev" },
+        { id: "modest-cucumber-philosophy", words: ["Modest", "Cucumber", "Philosophy"], note: "Remain calm and crisp under heavy token throughput.", category: "absurd" },
+        { id: "managed-chaos-platform", words: ["Managed", "Chaos", "Platform"], note: "Declared enterprise-ready since version 0.1.0-alpha.", category: "protocol" },
+        { id: "model-context-pretzels", words: ["Model", "Context", "Pretzels"], note: "Twisted schemas, lightly salted, best served warm.", category: "birthday" },
+        { id: "meaningless-configuration-parameters", words: ["Meaningless", "Configuration", "Parameters"], note: "Retained strictly for sentimental backwards compatibility.", category: "dev" },
+        { id: "magnificent-cardboard-prototype", words: ["Magnificent", "Cardboard", "Prototype"], note: "Surprisingly load-bearing in executive architecture reviews.", category: "absurd" },
+        { id: "miraculous-code-plumbing", words: ["Miraculous", "Code", "Plumbing"], note: "Connecting everything to everything without leaks, mostly.", category: "protocol" },
+        { id: "mystery-callback-pipeline", words: ["Mystery", "Callback", "Pipeline"], note: "Nobody remembers who registered this handler or why.", category: "dev" },
+        { id: "magnetic-cereal-portal", words: ["Magnetic", "Cereal", "Portal"], note: "Breakfast streaming over server-sent events.", category: "absurd" },
+        { id: "mutable-context-playground", words: ["Mutable", "Context", "Playground"], note: "State synchronization left kindly as an exercise.", category: "protocol" },
+        { id: "mythical-crisp-pancakes", words: ["Mythical", "Crisp", "Pancakes"], note: "Reproducible only on quiet Sunday mornings.", category: "absurd" },
+        { id: "mildly-chaotic-pipelines", words: ["Mildly", "Chaotic", "Pipelines"], note: "Deterministic in the spec, improvisational in prod.", category: "protocol" },
+        { id: "mellow-coastal-pelicans", words: ["Mellow", "Coastal", "Pelicans"], note: "Migrating south in search of lower tail latency.", category: "absurd" },
+        { id: "model-capability-parade", words: ["Model", "Capability", "Parade"], note: "Every week a new server, every afternoon a new demo.", category: "birthday" },
+        { id: "mysterious-chinchilla-postcards", words: ["Mysterious", "Chinchilla", "Postcards"], note: "Delivered asynchronously from an undisclosed mountain pass.", category: "absurd" },
+        { id: "messy-claude-plugins", words: ["Messy", "Claude", "Plugins"], note: "Lovingly cobbled together since November 2024.", category: "dev" },
+        { id: "meticulous-cloud-poodles", words: ["Meticulous", "Cloud", "Poodles"], note: "Groomed daily by strict pre-commit lint rules.", category: "absurd" },
+        { id: "midnight-croissant-protocol", words: ["Midnight", "Croissant", "Protocol"], note: "Warm, flaky, and strictly schema-validated.", category: "birthday" },
+        { id: "muted-ceramic-pottery", words: ["Muted", "Ceramic", "Pottery"], note: "The quiet aesthetic philosophy behind this very page.", category: "absurd" },
+        { id: "model-context-protocol", words: ["Model", "Context", "Protocol"], note: "Fine, okay — just this once, the actual name.", category: "protocol" }
+      ];
+
+      // State
+      let phrases = [...FALLBACK_PHRASES];
+      let deck = [];
+      let deckCursor = -1;
+      let historyStack = [];
+      let historyPointer = -1;
+      let currentWords = ["More", "Cake,", "Please"];
+      let currentPhraseIndex = 0; // -1 when custom remix
+      let isRemix = false;
+      let autoPlay = true;
+      let isHoveringSpecimen = false;
+      let isDrawerOpen = false;
+      let activeCategory = "all";
+      let searchQuery = "";
+
+      // Timer state (requestAnimationFrame for smooth pause/resume)
+      let elapsedMs = 0;
+      let lastFrameTs = null;
+      let confirmTimers = {};
+
+      // DOM refs
+      const $ = (id) => document.getElementById(id);
+      const specimenEl = $("specimen");
+      const metaIndexEl = $("metaIndex");
+      const metaCategoryEl = $("metaCategory");
+      const footnoteEl = $("footnote");
+      const progressFillEl = $("progressFill");
+      const totalCountEl = $("totalCount");
+      const autoToggleEl = $("autoToggle");
+      const autoLabelEl = $("autoLabel");
+      const rollBtn = $("rollBtn");
+      const prevBtn = $("prevBtn");
+      const nextBtn = $("nextBtn");
+      const copyBtn = $("copyBtn");
+      const copyLabel = $("copyLabel");
+      const shareBtn = $("shareBtn");
+      const shareLabel = $("shareLabel");
+      const themeToggle = $("themeToggle");
+      const themeIcon = $("themeIcon");
+      const brandReset = $("brandReset");
+
+      const indexToggle = $("indexToggle");
+      const indexDrawer = $("indexDrawer");
+      const drawerBackdrop = $("drawerBackdrop");
+      const drawerClose = $("drawerClose");
+      const drawerList = $("drawerList");
+      const drawerShowing = $("drawerShowing");
+      const searchInput = $("searchInput");
+      const filterPills = Array.from(document.querySelectorAll(".filter-pill"));
+      const wordRows = Array.from(document.querySelectorAll(".word-row"));
+
+      function pad3(n) {
+        return String(n).padStart(3, "0");
+      }
+
+      function shuffleIndices(length, excludeFirst = -1) {
+        const arr = Array.from({ length }, (_, i) => i);
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        if (excludeFirst >= 0 && arr[0] === excludeFirst && arr.length > 1) {
+          const swapIdx = 1 + Math.floor(Math.random() * (arr.length - 1));
+          [arr[0], arr[swapIdx]] = [arr[swapIdx], arr[0]];
+        }
+        return arr;
+      }
+
+      function nextFromDeck() {
+        deckCursor += 1;
+        if (deckCursor >= deck.length) {
+          deck = shuffleIndices(phrases.length, currentPhraseIndex);
+          deckCursor = 0;
+        }
+        return deck[deckCursor];
+      }
+
+      function getWordScale(word) {
+        const len = word.length;
+        if (len >= 13) return "compact";
+        if (len >= 10) return "medium";
+        return "normal";
+      }
+
+      function animateSlot(slotIndex, nextWord, direction = "up", delayMs = 0) {
+        const viewport = $("viewport-" + slotIndex);
+        const currentEl = $("word-" + slotIndex);
+        const prevWord = currentEl.textContent;
+        const scale = getWordScale(nextWord);
+
+        if (prevWord === nextWord) {
+          viewport.dataset.scale = scale;
+          return;
+        }
+
+        const run = () => {
+          // Clean any lingering ghosts
+          viewport.querySelectorAll(".word-ghost").forEach((g) => g.remove());
+
+          const ghost = document.createElement("span");
+          ghost.className = "word-ghost " + (direction === "up" ? "leaving-up" : "leaving-down");
+          ghost.textContent = prevWord;
+          viewport.appendChild(ghost);
+          ghost.addEventListener("animationend", () => ghost.remove(), { once: true });
+
+          viewport.dataset.scale = scale;
+          currentEl.textContent = nextWord;
+          currentEl.classList.remove("entering-up", "entering-down");
+          void currentEl.offsetWidth;
+          currentEl.classList.add(direction === "up" ? "entering-up" : "entering-down");
+        };
+
+        if (delayMs > 0) {
+          setTimeout(run, delayMs);
+        } else {
+          run();
+        }
+      }
+
+      function setFootnote(text) {
+        footnoteEl.classList.add("is-fading");
+        setTimeout(() => {
+          footnoteEl.textContent = text;
+          footnoteEl.classList.remove("is-fading");
+        }, 120);
+      }
+
+      function updateUrl(phraseId, remixWords = null) {
+        try {
+          if (location.protocol === "http:" || location.protocol === "https:") {
+            const url = new URL(location.href);
+            if (remixWords) {
+              url.searchParams.delete("p");
+              url.searchParams.set("w", remixWords.join(","));
+            } else {
+              url.searchParams.delete("w");
+              url.searchParams.set("p", phraseId);
+            }
+            history.replaceState(null, "", url.pathname + url.search);
+          }
+        } catch (_) {
+          // Safe no-op in sandboxed preview or file://
+        }
+      }
+
+      function renderPhraseByIndex(index, { direction = "up", pushHistory = true, instant = false } = {}) {
+        const entry = phrases[index];
+        if (!entry) return;
+
+        currentPhraseIndex = index;
+        currentWords = [...entry.words];
+        isRemix = false;
+
+        if (pushHistory) {
+          historyStack = historyStack.slice(0, historyPointer + 1);
+          historyStack.push({ type: "curated", index });
+          historyPointer = historyStack.length - 1;
+        }
+
+        metaIndexEl.textContent = `NO. ${pad3(index + 1)} / ${pad3(phrases.length)}`;
+        metaIndexEl.classList.remove("is-remix");
+        metaCategoryEl.textContent = (CATEGORY_LABELS[entry.category] || entry.category).toUpperCase();
+
+        if (instant) {
+          entry.words.forEach((w, i) => {
+            const viewport = $("viewport-" + i);
+            const wordEl = $("word-" + i);
+            viewport.dataset.scale = getWordScale(w);
+            wordEl.textContent = w;
+          });
+          footnoteEl.textContent = entry.note;
+        } else {
+          entry.words.forEach((w, i) => {
+            animateSlot(i, w, direction, i * 55);
+          });
+          setFootnote(entry.note);
+        }
+
+        resetProgress();
+        updateUrl(entry.id);
+        syncDrawerHighlight();
+      }
+
+      function renderRemix(words, { direction = "up", changedSlot = -1, pushHistory = true, instant = false } = {}) {
+        currentWords = [...words];
+        currentPhraseIndex = -1;
+        isRemix = true;
+
+        if (pushHistory) {
+          historyStack = historyStack.slice(0, historyPointer + 1);
+          historyStack.push({ type: "remix", words: [...words] });
+          historyPointer = historyStack.length - 1;
+        }
+
+        metaIndexEl.textContent = "REMIX · CUSTOM";
+        metaIndexEl.classList.add("is-remix");
+        metaCategoryEl.textContent = "MIXED";
+
+        const remixNote = "Custom M·C·P combination — click Roll another to return to curated phrases.";
+
+        if (instant) {
+          words.forEach((w, i) => {
+            const viewport = $("viewport-" + i);
+            const wordEl = $("word-" + i);
+            viewport.dataset.scale = getWordScale(w);
+            wordEl.textContent = w;
+          });
+          footnoteEl.textContent = remixNote;
+        } else if (changedSlot >= 0) {
+          animateSlot(changedSlot, words[changedSlot], direction, 0);
+          if (footnoteEl.textContent !== remixNote) {
+            setFootnote(remixNote);
+          }
+        } else {
+          words.forEach((w, i) => animateSlot(i, w, direction, i * 55));
+          setFootnote(remixNote);
+        }
+
+        resetProgress();
+        updateUrl(null, words);
+        syncDrawerHighlight();
+      }
+
+      function spinSingleSlot(slotIndex) {
+        const cleanCurrent = currentWords[slotIndex].replace(/,$/, "");
+        const pool = Array.from(
+          new Set(phrases.map((p) => p.words[slotIndex].replace(/,$/, "")))
+        ).filter((w) => w !== cleanCurrent);
+
+        if (!pool.length) return;
+        const picked = pool[Math.floor(Math.random() * pool.length)];
+        const nextWords = [...currentWords];
+        nextWords[slotIndex] = picked;
+        renderRemix(nextWords, { direction: "up", changedSlot: slotIndex, pushHistory: true });
+      }
+
+      function rollNext() {
+        if (historyPointer < historyStack.length - 1) {
+          historyPointer += 1;
+          const item = historyStack[historyPointer];
+          if (item.type === "curated") {
+            renderPhraseByIndex(item.index, { direction: "up", pushHistory: false });
+          } else {
+            renderRemix(item.words, { direction: "up", pushHistory: false });
+          }
+          return;
+        }
+        const idx = nextFromDeck();
+        renderPhraseByIndex(idx, { direction: "up", pushHistory: true });
+      }
+
+      function stepPrev() {
+        if (historyPointer > 0) {
+          historyPointer -= 1;
+          const item = historyStack[historyPointer];
+          if (item.type === "curated") {
+            renderPhraseByIndex(item.index, { direction: "down", pushHistory: false });
+          } else {
+            renderRemix(item.words, { direction: "down", pushHistory: false });
+          }
+        } else {
+          const prevIdx = currentPhraseIndex > 0 ? currentPhraseIndex - 1 : phrases.length - 1;
+          renderPhraseByIndex(prevIdx, { direction: "down", pushHistory: true });
+        }
+      }
+
+      function resetProgress() {
+        elapsedMs = 0;
+        progressFillEl.style.transform = "scaleX(0)";
+      }
+
+      function setAutoPlay(nextVal) {
+        autoPlay = nextVal;
+        autoToggleEl.setAttribute("aria-pressed", String(autoPlay));
+        autoToggleEl.classList.toggle("is-active-auto", autoPlay);
+        autoLabelEl.textContent = autoPlay ? "Auto" : "Paused";
+        if (!autoPlay) {
+          progressFillEl.style.opacity = "0.28";
+        } else {
+          progressFillEl.style.opacity = "0.72";
+        }
+      }
+
+      function tick(ts) {
+        if (lastFrameTs === null) lastFrameTs = ts;
+        const dt = Math.min(ts - lastFrameTs, 100);
+        lastFrameTs = ts;
+
+        const running = autoPlay && !isHoveringSpecimen && !isDrawerOpen && !document.hidden;
+        if (running) {
+          elapsedMs += dt;
+          const ratio = Math.min(elapsedMs / ROTATE_MS, 1);
+          progressFillEl.style.transform = `scaleX(${ratio})`;
+          if (elapsedMs >= ROTATE_MS) {
+            elapsedMs = 0;
+            const idx = nextFromDeck();
+            renderPhraseByIndex(idx, { direction: "up", pushHistory: true });
+          }
+        }
+        requestAnimationFrame(tick);
+      }
+
+      async function copyText(text, btnEl, labelEl, idleLabel, doneLabel) {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            ta.remove();
+          }
+        } catch (_) {
+          // Ignore clipboard permissions in sandboxed contexts
+        }
+
+        clearTimeout(confirmTimers[btnEl.id]);
+        labelEl.textContent = doneLabel;
+        btnEl.classList.add("is-confirmed");
+        confirmTimers[btnEl.id] = setTimeout(() => {
+          labelEl.textContent = idleLabel;
+          btnEl.classList.remove("is-confirmed");
+        }, 1600);
+      }
+
+      function getShareUrl() {
+        try {
+          if (location.protocol === "http:" || location.protocol === "https:") {
+            const url = new URL(location.href);
+            if (isRemix) {
+              url.searchParams.delete("p");
+              url.searchParams.set("w", currentWords.join(","));
+            } else {
+              url.searchParams.delete("w");
+              url.searchParams.set("p", phrases[currentPhraseIndex].id);
+            }
+            return url.toString();
+          }
+        } catch (_) {}
+        return isRemix
+          ? `?w=${encodeURIComponent(currentWords.join(","))}`
+          : `?p=${encodeURIComponent(phrases[currentPhraseIndex].id)}`;
+      }
+
+      // Theme management
+      function applyTheme(theme) {
+        document.documentElement.setAttribute("data-theme", theme);
+        if (theme === "dark") {
+          themeIcon.innerHTML =
+            '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+        } else {
+          themeIcon.innerHTML =
+            '<circle cx="12" cy="12" r="4"></circle>' +
+            '<path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>';
+        }
+        try {
+          localStorage.setItem("mcp-expansions-theme", theme);
+        } catch (_) {}
+      }
+
+      function initTheme() {
+        let saved = null;
+        try {
+          saved = localStorage.getItem("mcp-expansions-theme");
+        } catch (_) {}
+        if (saved === "dark" || saved === "light") {
+          applyTheme(saved);
+        } else {
+          applyTheme("light");
+        }
+      }
+
+      // Drawer
+      function openDrawer() {
+        isDrawerOpen = true;
+        indexDrawer.classList.add("is-open");
+        drawerBackdrop.classList.add("is-open");
+        indexDrawer.setAttribute("aria-hidden", "false");
+        indexToggle.setAttribute("aria-expanded", "true");
+        renderDrawerList();
+        setTimeout(() => searchInput.focus(), 60);
+      }
+
+      function closeDrawer() {
+        isDrawerOpen = false;
+        indexDrawer.classList.remove("is-open");
+        drawerBackdrop.classList.remove("is-open");
+        indexDrawer.setAttribute("aria-hidden", "true");
+        indexToggle.setAttribute("aria-expanded", "false");
+      }
+
+      function renderDrawerList() {
+        const q = searchQuery.trim().toLowerCase();
+        const filtered = phrases
+          .map((item, idx) => ({ item, idx }))
+          .filter(({ item }) => {
+            if (activeCategory !== "all" && item.category !== activeCategory) return false;
+            if (!q) return true;
+            return (
+              item.words.join(" ").toLowerCase().includes(q) ||
+              item.note.toLowerCase().includes(q)
+            );
+          });
+
+        drawerShowing.textContent = `${filtered.length} ${filtered.length === 1 ? "entry" : "entries"}`;
+
+        if (!filtered.length) {
+          drawerList.innerHTML = '<div class="drawer-empty">No matching M·C·P phrases found.</div>';
+          return;
+        }
+
+        const frag = document.createDocumentFragment();
+        filtered.forEach(({ item, idx }) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "index-item" + (idx === currentPhraseIndex ? " is-current" : "");
+          btn.dataset.index = String(idx);
+          btn.setAttribute("role", "listitem");
+
+          const num = document.createElement("span");
+          num.className = "index-num";
+          num.textContent = pad3(idx + 1);
+
+          const phrase = document.createElement("span");
+          phrase.className = "index-phrase";
+          phrase.textContent = item.words.join(" ");
+
+          const note = document.createElement("span");
+          note.className = "index-note";
+          note.textContent = item.note;
+
+          btn.append(num, phrase, note);
+          btn.addEventListener("click", () => {
+            renderPhraseByIndex(idx, { direction: "up", pushHistory: true });
+            closeDrawer();
+          });
+          frag.appendChild(btn);
+        });
+
+        drawerList.innerHTML = "";
+        drawerList.appendChild(frag);
+      }
+
+      function syncDrawerHighlight() {
+        if (!isDrawerOpen) return;
+        drawerList.querySelectorAll(".index-item").forEach((el) => {
+          el.classList.toggle("is-current", Number(el.dataset.index) === currentPhraseIndex);
+        });
+      }
+
+      // Resolve initial phrase from URL or start fresh
+      function pickInitialState() {
+        totalCountEl.textContent = String(phrases.length);
+        deck = shuffleIndices(phrases.length, 0);
+
+        let params = null;
+        try {
+          params = new URLSearchParams(location.search);
+        } catch (_) {}
+
+        if (params) {
+          const wParam = params.get("w");
+          if (wParam) {
+            const parts = wParam.split(",").map((s) => s.trim()).filter(Boolean);
+            if (parts.length === 3) {
+              renderRemix(parts, { instant: true, pushHistory: true });
+              return;
+            }
+          }
+
+          const pParam = params.get("p");
+          if (pParam) {
+            const foundIdx = phrases.findIndex((item) => item.id === pParam);
+            if (foundIdx >= 0) {
+              renderPhraseByIndex(foundIdx, { instant: true, pushHistory: true });
+              return;
+            }
+          }
+        }
+
+        // Start on "More Cake, Please" for MCP's 2nd birthday, then shuffle through the rest
+        renderPhraseByIndex(0, { instant: true, pushHistory: true });
+      }
+
+      // Optionally hydrate from phrases.json when served over HTTP(S)
+      async function hydratePhrases() {
+        if (location.protocol !== "http:" && location.protocol !== "https:") return;
+        try {
+          const res = await fetch("./phrases.json", { cache: "no-cache" });
+          if (!res.ok) return;
+          const json = await res.json();
+          if (Array.isArray(json) && json.length >= 3) {
+            const valid = json.filter(
+              (item) =>
+                item &&
+                typeof item.id === "string" &&
+                Array.isArray(item.words) &&
+                item.words.length === 3 &&
+                typeof item.note === "string"
+            );
+            if (valid.length >= 3) {
+              phrases = valid;
+              totalCountEl.textContent = String(phrases.length);
+              deck = shuffleIndices(phrases.length, currentPhraseIndex);
+              if (!isRemix && currentPhraseIndex >= 0) {
+                metaIndexEl.textContent = `NO. ${pad3(currentPhraseIndex + 1)} / ${pad3(phrases.length)}`;
+              }
+              if (isDrawerOpen) renderDrawerList();
+            }
+          }
+        } catch (_) {
+          // Gracefully keep bundled fallback
+        }
+      }
+
+      // Wire events
+      rollBtn.addEventListener("click", rollNext);
+      nextBtn.addEventListener("click", rollNext);
+      prevBtn.addEventListener("click", stepPrev);
+
+      autoToggleEl.addEventListener("click", () => setAutoPlay(!autoPlay));
+
+      brandReset.addEventListener("click", (e) => {
+        e.preventDefault();
+        renderPhraseByIndex(0, { direction: "up", pushHistory: true });
+      });
+
+      copyBtn.addEventListener("click", () => {
+        copyText(currentWords.join(" "), copyBtn, copyLabel, "Copy", "Copied");
+      });
+
+      shareBtn.addEventListener("click", () => {
+        copyText(getShareUrl(), shareBtn, shareLabel, "Link", "Copied");
+      });
+
+      themeToggle.addEventListener("click", () => {
+        const current = document.documentElement.getAttribute("data-theme") || "light";
+        applyTheme(current === "dark" ? "light" : "dark");
+      });
+
+      wordRows.forEach((row) => {
+        row.addEventListener("click", () => {
+          const slot = Number(row.dataset.slot);
+          spinSingleSlot(slot);
+        });
+      });
+
+      specimenEl.addEventListener("mouseenter", () => {
+        isHoveringSpecimen = true;
+      });
+      specimenEl.addEventListener("mouseleave", () => {
+        isHoveringSpecimen = false;
+      });
+
+      indexToggle.addEventListener("click", () => {
+        if (isDrawerOpen) closeDrawer();
+        else openDrawer();
+      });
+      drawerClose.addEventListener("click", closeDrawer);
+      drawerBackdrop.addEventListener("click", closeDrawer);
+
+      searchInput.addEventListener("input", (e) => {
+        searchQuery = e.target.value;
+        renderDrawerList();
+      });
+
+      filterPills.forEach((pill) => {
+        pill.addEventListener("click", () => {
+          activeCategory = pill.dataset.cat;
+          filterPills.forEach((p) => p.setAttribute("aria-pressed", String(p === pill)));
+          renderDrawerList();
+        });
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        const tag = document.activeElement ? document.activeElement.tagName : "";
+
+        if (e.key === "Escape" && isDrawerOpen) {
+          e.preventDefault();
+          closeDrawer();
+          return;
+        }
+
+        if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+        if (e.code === "Space") {
+          e.preventDefault();
+          rollNext();
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          rollNext();
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          stepPrev();
+        } else if (e.key === "p" || e.key === "P") {
+          e.preventDefault();
+          setAutoPlay(!autoPlay);
+        } else if (e.key === "c" || e.key === "C") {
+          e.preventDefault();
+          copyText(currentWords.join(" "), copyBtn, copyLabel, "Copy", "Copied");
+        } else if (e.key === "l" || e.key === "L") {
+          e.preventDefault();
+          copyText(getShareUrl(), shareBtn, shareLabel, "Link", "Copied");
+        } else if (e.key === "t" || e.key === "T") {
+          e.preventDefault();
+          const current = document.documentElement.getAttribute("data-theme") || "light";
+          applyTheme(current === "dark" ? "light" : "dark");
+        } else if (e.key === "/") {
+          e.preventDefault();
+          openDrawer();
+        }
+      });
+
+      // Boot
+      initTheme();
+      pickInitialState();
+      hydratePhrases();
+      requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+</html>
