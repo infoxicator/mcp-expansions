@@ -43,6 +43,13 @@ export const INSTRUMENTS = [
     cue: 'Flip plug 180° or press Space',
     modulePath: './instruments/flip-contract.js',
   },
+  {
+    id: 'specimen-drawer',
+    number: '07',
+    title: 'Specimen Drawer',
+    cue: 'Pick a cable or press Space',
+    modulePath: './instruments/specimen-drawer.js',
+  },
 ];
 
 export function findInstrumentIndex(id) {

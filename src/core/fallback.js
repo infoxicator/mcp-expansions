@@ -77,6 +77,22 @@ function svgDiagramFor(instrumentId) {
           <rect x="186" y="48" width="52" height="24" rx="6" stroke-width="1.5"/>
           <line x1="238" y1="60" x2="292" y2="60" stroke-width="3" opacity="0.5"/>
         </svg>`;
+    case 'specimen-drawer':
+      return `
+        <svg class="fallback-diagram" viewBox="0 0 320 130" fill="none" stroke="currentColor" aria-hidden="true">
+          <rect x="34" y="16" width="252" height="98" rx="6" stroke-width="1.6"/>
+          <line x1="84" y1="16" x2="84" y2="80" stroke-width="1" opacity="0.45"/>
+          <line x1="135" y1="16" x2="135" y2="80" stroke-width="1" opacity="0.45"/>
+          <line x1="185" y1="16" x2="185" y2="80" stroke-width="1" opacity="0.45"/>
+          <line x1="236" y1="16" x2="236" y2="80" stroke-width="1" opacity="0.45"/>
+          <ellipse cx="59" cy="48" rx="14" ry="22" stroke-width="1.2" opacity="0.5"/>
+          <ellipse cx="110" cy="48" rx="14" ry="22" stroke-width="1.2" opacity="0.5"/>
+          <ellipse cx="160" cy="48" rx="14" ry="22" stroke-width="1.8"/>
+          <ellipse cx="210" cy="48" rx="14" ry="22" stroke-width="1.2" opacity="0.5"/>
+          <ellipse cx="261" cy="48" rx="14" ry="22" stroke-width="1.2" opacity="0.5"/>
+          <line x1="34" y1="80" x2="286" y2="80" stroke-width="1.2" opacity="0.6"/>
+          <text x="160" y="101" text-anchor="middle" font-size="9.5" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">SPEC 03 · LIVE · M · C · P</text>
+        </svg>`;
     default:
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 100" fill="none" stroke="currentColor" aria-hidden="true">
