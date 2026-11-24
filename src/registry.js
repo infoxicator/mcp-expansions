@@ -36,6 +36,13 @@ export const INSTRUMENTS = [
     cue: 'Seat VCONN cable or press Space',
     modulePath: './instruments/discover-identity.js',
   },
+  {
+    id: 'flip-contract',
+    number: '06',
+    title: 'Flip Contract',
+    cue: 'Flip plug 180° or press Space',
+    modulePath: './instruments/flip-contract.js',
+  },
 ];
 
 export function findInstrumentIndex(id) {

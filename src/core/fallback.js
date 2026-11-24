@@ -67,6 +67,16 @@ function svgDiagramFor(instrumentId) {
           <rect x="234" y="34" width="60" height="42" rx="5" stroke-width="1.5"/>
           <text x="264" y="59" text-anchor="middle" font-size="10" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">SOP''</text>
         </svg>`;
+    case 'flip-contract':
+      return `
+        <svg class="fallback-diagram" viewBox="0 0 320 120" fill="none" stroke="currentColor" aria-hidden="true">
+          <rect x="44" y="22" width="136" height="76" rx="8" stroke-width="1.6"/>
+          <rect x="56" y="34" width="102" height="52" rx="3" stroke-width="1" opacity="0.5"/>
+          <text x="107" y="56" text-anchor="middle" font-size="9" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">CC1 / CC2</text>
+          <text x="107" y="72" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">M · C · P</text>
+          <rect x="186" y="48" width="52" height="24" rx="6" stroke-width="1.5"/>
+          <line x1="238" y1="60" x2="292" y2="60" stroke-width="3" opacity="0.5"/>
+        </svg>`;
     default:
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 100" fill="none" stroke="currentColor" aria-hidden="true">
