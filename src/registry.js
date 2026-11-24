@@ -64,6 +64,13 @@ export const INSTRUMENTS = [
     cue: 'Pull proof or press Space',
     modulePath: './instruments/letterpress-lockup.js',
   },
+  {
+    id: 'dymo-embosser',
+    number: '10',
+    title: 'Dymo Embosser',
+    cue: 'Squeeze trigger or press Space',
+    modulePath: './instruments/dymo-embosser.js',
+  },
 ];
 
 export function findInstrumentIndex(id) {

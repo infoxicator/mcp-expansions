@@ -119,6 +119,18 @@ function svgDiagramFor(instrumentId) {
           <line x1="192" y1="74" x2="258" y2="74" stroke-width="1" opacity="0.4"/>
           <line x1="192" y1="88" x2="246" y2="88" stroke-width="1" opacity="0.4"/>
         </svg>`;
+    case 'dymo-embosser':
+      return `
+        <svg class="fallback-diagram" viewBox="0 0 320 120" fill="none" stroke="currentColor" aria-hidden="true">
+          <circle cx="88" cy="60" r="34" stroke-width="1.6"/>
+          <circle cx="88" cy="60" r="10" stroke-width="1.2" opacity="0.6"/>
+          <rect x="136" y="26" width="144" height="18" rx="3" stroke-width="1.4"/>
+          <rect x="136" y="51" width="144" height="18" rx="3" stroke-width="1.4"/>
+          <rect x="136" y="76" width="144" height="18" rx="3" stroke-width="1.4"/>
+          <text x="150" y="38" font-size="9" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">M |</text>
+          <text x="150" y="63" font-size="9" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">C |</text>
+          <text x="150" y="88" font-size="9" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">P |</text>
+        </svg>`;
     default:
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 100" fill="none" stroke="currentColor" aria-hidden="true">
