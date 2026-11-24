@@ -52,6 +52,21 @@ function svgDiagramFor(instrumentId) {
           <rect x="60" y="49" width="200" height="12" rx="6" stroke-width="1.6"/>
           <text x="160" y="58" text-anchor="middle" font-size="8" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">AWM 2725 · M · C · P</text>
         </svg>`;
+    case 'discover-identity':
+      return `
+        <svg class="fallback-diagram" viewBox="0 0 320 110" fill="none" stroke="currentColor" aria-hidden="true">
+          <rect x="14" y="28" width="44" height="54" rx="6" stroke-width="1.4" opacity="0.65"/>
+          <circle cx="44" cy="40" r="3" fill="currentColor" stroke="none"/>
+          <line x1="58" y1="55" x2="78" y2="55" stroke-width="2.5" opacity="0.5"/>
+          <rect x="78" y="34" width="60" height="42" rx="5" stroke-width="1.5"/>
+          <text x="108" y="59" text-anchor="middle" font-size="10" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">SOP</text>
+          <line x1="138" y1="55" x2="156" y2="55" stroke-width="2.5" opacity="0.5"/>
+          <rect x="156" y="34" width="60" height="42" rx="5" stroke-width="1.5"/>
+          <text x="186" y="59" text-anchor="middle" font-size="10" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">SOP'</text>
+          <line x1="216" y1="55" x2="234" y2="55" stroke-width="2.5" opacity="0.5"/>
+          <rect x="234" y="34" width="60" height="42" rx="5" stroke-width="1.5"/>
+          <text x="264" y="59" text-anchor="middle" font-size="10" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">SOP''</text>
+        </svg>`;
     default:
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 100" fill="none" stroke="currentColor" aria-hidden="true">

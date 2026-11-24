@@ -29,6 +29,13 @@ export const INSTRUMENTS = [
     cue: 'Pull cable taut or press Space',
     modulePath: './instruments/jacket-legend.js',
   },
+  {
+    id: 'discover-identity',
+    number: '05',
+    title: 'Discover Identity',
+    cue: 'Seat VCONN cable or press Space',
+    modulePath: './instruments/discover-identity.js',
+  },
 ];
 
 export function findInstrumentIndex(id) {
