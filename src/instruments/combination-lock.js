@@ -9,12 +9,13 @@ const NEIGHBOR_WORDS = [
 ];
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme);
+  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#ba9b68');
 
   // Elevated overhead studio macro framing the full padlock (U-shackle + 3 word tumblers + end cap)
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 50);
-  camera.position.set(-0.22, 16.4, 4.1);
+  camera.position.set(-0.64, 16.0, 4.96);
   camera.lookAt(-0.22, 0.86, 0.0);
+  camera.rotateZ(THREE.MathUtils.degToRad(-13));
 
   const root = await studio.loadGLB('./assets/models/combination-lock.glb');
   scene.add(root);

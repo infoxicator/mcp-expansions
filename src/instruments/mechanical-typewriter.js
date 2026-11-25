@@ -3,12 +3,13 @@ import { studio, createStudioScene, createContactShadow } from '../core/studio.j
 import { sound } from '../core/audio.js';
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme);
+  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#a2a59a');
 
   // Elevated 3/4 overhead studio macro framing the full typewriter deck, carriage knobs & cotton bond sheet
   const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 55);
-  camera.position.set(0.0, 12.6, 8.2);
+  camera.position.set(1.10, 12.55, 8.35);
   camera.lookAt(0.0, 0.72, -0.35);
+  camera.rotateZ(THREE.MathUtils.degToRad(3));
 
   const root = await studio.loadGLB('./assets/models/mechanical-typewriter.glb');
   scene.add(root);

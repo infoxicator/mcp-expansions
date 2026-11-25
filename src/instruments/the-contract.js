@@ -13,12 +13,13 @@ const NEGOTIATION_STEPS = [
 ];
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme);
+  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#81949a');
 
   // Product-photography macro flat-lay framing: matchbox meter centered (~44% width) flanked by both pale grey USB-C plugs & cables
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 45);
-  camera.position.set(0.26, 13.4, 4.35);
+  camera.position.set(1.50, 11.55, 4.35);
   camera.lookAt(0.26, 0.28, 0.0);
+  camera.rotateZ(THREE.MathUtils.degToRad(-11));
 
   const root = await studio.loadGLB('./assets/models/the-contract.glb');
   scene.add(root);

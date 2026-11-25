@@ -7,12 +7,13 @@ const SEGMENTS_V = 28;
 const CABLE_RADIUS = 0.24;
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme);
+  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#9caac4');
 
   // Macro overhead product flat-lay camera framing the full cable + both anodized USB-C plugs & stainless tongues
   const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 50);
-  camera.position.set(0.0, 18.2, 3.4);
+  camera.position.set(0.0, 12.9, 2.60);
   camera.lookAt(0.0, 0.22, 0.0);
+  camera.rotateZ(THREE.MathUtils.degToRad(-14));
 
   const root = await studio.loadGLB('./assets/models/jacket-legend.glb');
   scene.add(root);

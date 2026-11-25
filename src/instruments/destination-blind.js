@@ -17,11 +17,11 @@ const FLAP_POOL = [
 ];
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme);
+  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#87969d');
 
   // Clean eye-level architectural product view with gentle elevated angle & studio margins
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 45);
-  camera.position.set(0.0, 2.42, 12.55);
+  camera.position.set(0.67, 2.74, 12.55);
   camera.lookAt(0.0, 1.82, 0.0);
 
   const root = await studio.loadGLB('./assets/models/destination-blind.glb');

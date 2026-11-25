@@ -6,12 +6,13 @@ import { sound } from '../core/audio.js';
 const SPECIMEN_LIVE = [true, false, true, false, true];
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme);
+  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#a69887');
 
   // Elevated architectural overhead macro framing the entire divided archival specimen tray with clean studio margins
   const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 50);
-  camera.position.set(0.0, 12.6, 5.75);
+  camera.position.set(0.68, 12.95, 5.85);
   camera.lookAt(0.0, 0.28, 0.08);
+  camera.rotateZ(THREE.MathUtils.degToRad(-3));
 
   const root = await studio.loadGLB('./assets/models/specimen-drawer.glb');
   scene.add(root);

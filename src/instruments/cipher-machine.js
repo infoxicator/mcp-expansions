@@ -3,12 +3,13 @@ import { studio, createStudioScene, createContactShadow } from '../core/studio.j
 import { sound } from '../core/audio.js';
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme);
+  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#868775');
 
   // Elevated 3/4 studio macro angle framing the charcoal cipher box, knurled M·C·P rotors, brass crank, and foreground paper tape
   const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 45);
-  camera.position.set(0.30, 8.45, 7.65);
+  camera.position.set(1.45, 8.35, 7.30);
   camera.lookAt(0.24, 0.28, 0.26);
+  camera.rotateZ(THREE.MathUtils.degToRad(2));
 
   const root = await studio.loadGLB('./assets/models/cipher-machine.glb');
   scene.add(root);

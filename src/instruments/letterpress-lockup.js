@@ -3,12 +3,13 @@ import { studio, createStudioScene, createContactShadow } from '../core/studio.j
 import { sound } from '../core/audio.js';
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme);
+  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#b7a59e');
 
   // Overhead studio flat-lay framing the blued-steel chase lockup on the left + 600gsm cotton proof on the right
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 45);
-  camera.position.set(0.0, 13.6, 3.6);
+  camera.position.set(0.34, 13.25, 4.60);
   camera.lookAt(0.0, 0.18, 0.0);
+  camera.rotateZ(THREE.MathUtils.degToRad(3));
 
   const root = await studio.loadGLB('./assets/models/letterpress-lockup.glb');
   scene.add(root);

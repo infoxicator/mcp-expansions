@@ -3,12 +3,13 @@ import { studio, createStudioScene, createContactShadow } from '../core/studio.j
 import { sound } from '../core/audio.js';
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme);
+  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#bb7453');
 
   // Macro studio flat-lay framing the matte-black receptacle block on left + reversible anodized USB-C plug on right
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 45);
-  camera.position.set(0.05, 13.5, 4.15);
+  camera.position.set(1.15, 12.65, 4.70);
   camera.lookAt(0.05, 0.34, 0.0);
+  camera.rotateZ(THREE.MathUtils.degToRad(7));
 
   const root = await studio.loadGLB('./assets/models/flip-contract.glb');
   scene.add(root);

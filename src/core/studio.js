@@ -1,23 +1,24 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 export const STUDIO_THEMES = {
   light: {
     bgHex: 0xf2ede4,
     bgCss: '#F2EDE4',
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.31,
     aoOpacity: 0.30,
     exposure: 1.04,
-    envIntensity: 1.05,
-    keyIntensity: 2.15,
-    fillIntensity: 0.72,
-    rimIntensity: 0.78,
+    envIntensity: 1.25,
+    keyIntensity: 1.48,
+    fillIntensity: 0.24,
+    rimIntensity: 0.32,
   },
   dark: {
     bgHex: 0x131312,
     bgCss: '#131312',
-    shadowOpacity: 0.58,
+    shadowOpacity: 0.42,
     aoOpacity: 0.64,
     exposure: 1.10,
     envIntensity: 1.0,
@@ -31,9 +32,10 @@ class StudioRuntime {
   constructor() {
     this.renderer = null;
     this.pmrem = null;
-    this.envs = {};
+    this.environment = null;
+    this.environmentReady = null;
     this.gltfLoader = null;
-    this.modelCache = new Map();
+
     this.textureCache = new Map();
     this.supported = null;
     this.currentSize = 0;
@@ -48,7 +50,8 @@ class StudioRuntime {
     }
     try {
       const c = document.createElement('canvas');
-      const gl = c.getContext('webgl2') || c.getContext('webgl');
+      const gl = c.getContext('webgl2');
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
       this.supported = Boolean(gl);
     } catch (_) {
       this.supported = false;
@@ -70,7 +73,7 @@ class StudioRuntime {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.04;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.setPixelRatio(1);
     renderer.setSize(1080, 1080, false);
     this.currentSize = 1080;
@@ -78,9 +81,6 @@ class StudioRuntime {
     this.renderer = renderer;
     this.pmrem = new THREE.PMREMGenerator(renderer);
     this.pmrem.compileEquirectangularShader();
-
-    this.envs.light = this._buildStudioEnv('light');
-    this.envs.dark = this._buildStudioEnv('dark');
 
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('./vendor/three/jsm/libs/draco/gltf/');
@@ -91,84 +91,24 @@ class StudioRuntime {
     return renderer;
   }
 
-  _buildStudioEnv(mode) {
-    // High-contrast product photography cyclorama: dark surround + crisp bright softboxes + black velvet negative-fill flags
-    const envScene = new THREE.Scene();
-    const isLight = mode === 'light';
-
-    const domeGeo = new THREE.SphereGeometry(28, 32, 20);
-    const domeMat = new THREE.MeshBasicMaterial({
-      color: isLight ? new THREE.Color(0.24, 0.23, 0.22) : new THREE.Color(0.05, 0.05, 0.055),
-      side: THREE.BackSide,
-    });
-    envScene.add(new THREE.Mesh(domeGeo, domeMat));
-
-    const addPanel = (w, h, pos, lookAt, rgb) => {
-      const geo = new THREE.PlaneGeometry(w, h);
-      const mat = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(rgb[0], rgb[1], rgb[2]),
-        side: THREE.DoubleSide,
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(pos[0], pos[1], pos[2]);
-      mesh.lookAt(lookAt[0], lookAt[1], lookAt[2]);
-      envScene.add(mesh);
-    };
-
-    if (isLight) {
-      // Overhead diffused warm-daylight softbox
-      addPanel(14, 9, [0, 13.5, 1.5], [0, 0, 0], [4.2, 4.1, 3.9]);
-      // Left tall key strip softbox (signature curved highlight on chrome & bevels)
-      addPanel(5.2, 16, [-12.5, 5.5, 7.0], [0, 0, 0], [5.8, 5.65, 5.4]);
-      // Right soft fill card (cooler satin bounce)
-      addPanel(6.5, 13, [13.0, 4.5, 5.5], [0, 0, 0], [2.2, 2.3, 2.45]);
-      // Rear rim kicker
-      addPanel(12, 3.5, [0, 9.5, -12.0], [0, 0, 0], [3.2, 3.1, 2.95]);
-      // Warm paper sweep floor bounce (lifts lower hemisphere of chrome cleanly)
-      addPanel(28, 28, [0, -7.5, 0], [0, 0, 0], [1.18, 1.12, 1.03]);
-      // Black velvet negative-fill studio flags (creates rich silver/charcoal metallic separation on chrome!)
-      addPanel(9.0, 14, [-6.5, 0.5, 12.5], [0, 0, 0], [0.02, 0.02, 0.022]);
-      addPanel(8.0, 13, [7.5, 0.0, 12.0], [0, 0, 0], [0.025, 0.025, 0.028]);
-      addPanel(16, 4.0, [0, 2.5, 13.5], [0, 0, 0], [0.16, 0.155, 0.15]);
-    } else {
-      // Sculpted obsidian studio
-      addPanel(12, 8, [0, 13, 1.5], [0, 0, 0], [4.0, 3.95, 3.85]);
-      addPanel(4.8, 15, [-12, 6.5, 7.5], [0, 0, 0], [6.2, 6.1, 5.9]);
-      addPanel(5.5, 13, [12.5, 5.5, 4], [0, 0, 0], [2.6, 2.75, 2.95]);
-      addPanel(11, 3.5, [0, 9.5, -11.5], [0, 0, 0], [3.6, 3.55, 3.45]);
-      addPanel(26, 26, [0, -8, 0], [0, 0, 0], [0.11, 0.11, 0.115]);
-      addPanel(8, 14, [-6, 1, 12.5], [0, 0, 0], [0.012, 0.012, 0.014]);
-      addPanel(7, 12, [7, -1, 12], [0, 0, 0], [0.016, 0.016, 0.018]);
-    }
-
-    const rt = this.pmrem.fromScene(envScene, 0.028);
-    envScene.traverse((obj) => {
-      if (obj.geometry) obj.geometry.dispose();
-      if (obj.material) obj.material.dispose();
-    });
-    return rt.texture;
-  }
-
-  getEnvironment(theme) {
+  prepareLighting() {
     this.ensureRenderer();
-    return this.envs[theme === 'dark' ? 'dark' : 'light'];
+    this.environmentReady ??= new HDRLoader().loadAsync('./assets/lighting/studio.hdr')
+      .then((panorama) => {
+        const target = this.pmrem.fromEquirectangular(panorama);
+        this.environment = target.texture;
+        panorama.dispose();
+      }).catch((error) => {
+        this.environmentReady = null;
+        throw error;
+      });
+    return this.environmentReady;
   }
 
   async loadGLB(url) {
-    this.ensureRenderer();
-    if (!this.modelCache.has(url)) {
-      const promise = new Promise((resolve, reject) => {
-        this.gltfLoader.load(
-          url,
-          (gltf) => resolve(gltf),
-          undefined,
-          (err) => reject(err)
-        );
-      });
-      this.modelCache.set(url, promise);
-    }
-    const gltf = await this.modelCache.get(url);
-    return gltf.scene.clone(true);
+    // The browser caches the compressed bytes. Each mounted instrument owns the
+    // decoded geometry it disposes when it leaves the three-poster window.
+    return (await this.gltfLoader.loadAsync(url)).scene;
   }
 
   renderToCanvas(scene, camera, targetCanvas, theme = 'light', exposureMultiplier = 1.0) {
@@ -186,13 +126,98 @@ class StudioRuntime {
 
     const preset = STUDIO_THEMES[theme === 'dark' ? 'dark' : 'light'];
     renderer.toneMappingExposure = preset.exposure * exposureMultiplier;
-    renderer.render(scene, camera);
+    if (!scene.userData.surfacesReady) {
+      scene.traverse((object) => {
+        if (object.geometry?.attributes.color && object.material?.isMeshStandardMaterial) {
+          object.material.vertexColors = true;
+        }
+      });
+      scene.userData.surfacesReady = true;
+    }
+    this.renderPhotograph(renderer, scene, camera, w, h);
 
     const ctx = targetCanvas.getContext('2d');
     if (ctx) {
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(renderer.domElement, 0, 0, w, h);
     }
+  }
+
+  renderPhotograph(renderer, scene, camera, w, h) {
+    if (!this.negative) {
+      const depth = new THREE.DepthTexture(w, h);
+      this.negative = new THREE.WebGLRenderTarget(w, h, {
+        type: THREE.HalfFloatType, depthTexture: depth, samples: 2,
+      });
+      const lens = new THREE.ShaderMaterial({
+        uniforms: {
+          frame: { value: this.negative.texture }, depth: { value: depth },
+          pixel: { value: new THREE.Vector2() }, focus: { value: 1 },
+          clip: { value: new THREE.Vector2() },
+        },
+        vertexShader: `
+          varying vec2 coord;
+          void main() { coord = uv; gl_Position = vec4(position.xy, 0., 1.); }
+        `,
+        fragmentShader: `
+          uniform sampler2D frame, depth;
+          uniform vec2 pixel, clip;
+          uniform float focus;
+          varying vec2 coord;
+          void main() {
+            float z = texture2D(depth, coord).r;
+            float distance = clip.x * clip.y / (clip.y - z * (clip.y - clip.x));
+            float radius = min(1.6, max(0., abs(distance - focus) - .36) * .84);
+            vec3 light = texture2D(frame, coord).rgb * .4;
+            for (int i = 0; i < 6; i++) {
+              float a = float(i) * 1.047198;
+              light += .1 * texture2D(frame, coord + vec2(cos(a), sin(a)) * pixel * radius).rgb;
+            }
+            gl_FragColor = vec4(light, 1.);
+            #include <tonemapping_fragment>
+            #include <colorspace_fragment>
+            float grain = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056,.00583715))));
+            gl_FragColor.rgb += (grain - .5) * .014;
+          }
+        `,
+        depthTest: false, depthWrite: false,
+      });
+      this.lens = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), lens);
+      this.lens.frustumCulled = false;
+      this.lensCamera = new THREE.Camera();
+    }
+    this.negative.setSize(w, h);
+    const uniforms = this.lens.material.uniforms;
+    uniforms.depth.value = this.negative.depthTexture;
+    uniforms.pixel.value.set(1 / w, 1 / h);
+    uniforms.clip.value.set(camera.near, camera.far);
+    // Focus on the instrument face, leaving detail on its reading plane intact.
+    uniforms.focus.value = camera.position.length() - .65;
+    renderer.setRenderTarget(this.negative);
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+    renderer.render(this.lens, this.lensCamera);
+  }
+
+  getSweep(stock, theme) {
+    const key = stock + theme;
+    if (this.textureCache.has(key)) return this.textureCache.get(key);
+    const color = new THREE.Color(stock);
+    const paper = document.createElement('canvas');
+    paper.width = paper.height = 384;
+    const ctx = paper.getContext('2d');
+    const gradient = ctx.createRadialGradient(72, 40, 0, 85, 30, 500);
+    const dark = theme === 'dark';
+    for (const [stop, gain] of [[0, 1.35], [.56, .91], [1, .59]]) {
+      const tone = color.clone().multiplyScalar(gain * (dark ? .075 : 1));
+      gradient.addColorStop(stop, '#' + tone.getHexString());
+    }
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 384, 384);
+    const texture = new THREE.CanvasTexture(paper);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    this.textureCache.set(key, texture);
+    return texture;
   }
 
   /** Cached subtle anodized aluminum micro-grain roughness & bump map */
@@ -211,7 +236,7 @@ class StudioRuntime {
       return (seed - 1) / 2147483646;
     };
     for (let i = 0; i < d.length; i += 4) {
-      const n = 152 + Math.floor(rand() * 44);
+      const n = 205 + Math.floor(rand() * 45);
       d[i] = n;
       d[i + 1] = n;
       d[i + 2] = n;
@@ -245,7 +270,7 @@ class StudioRuntime {
       const streak = (rand() - 0.5) * 10;
       for (let x = 0; x < size; x++) {
         const idx = (y * size + x) * 4;
-        const v = Math.max(125, Math.min(200, Math.floor(158 + streak + (rand() - 0.5) * 16)));
+        const v = Math.max(125, Math.min(250, Math.floor(214 + streak + (rand() - 0.5) * 16)));
         d[idx] = v;
         d[idx + 1] = v;
         d[idx + 2] = v;
@@ -368,18 +393,19 @@ export const studio = new StudioRuntime();
 /**
  * Helper to create a studio-lit scene with seamless shadow-catching floor and calibrated lights.
  */
-export function createStudioScene(theme = 'light') {
+export function createStudioScene(theme = 'light', stock = '#c3b39c') {
   const preset = STUDIO_THEMES[theme === 'dark' ? 'dark' : 'light'];
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(preset.bgHex);
-  scene.environment = studio.getEnvironment(theme);
+  scene.background = studio.getSweep(stock, theme);
+  scene.environment = studio.environment;
   scene.environmentIntensity = preset.envIntensity;
+  scene.environmentRotation.y = 1.82;
 
   // Main overhead-left softbox key directional light with crisp soft shadows
   const keyLight = new THREE.DirectionalLight(0xfffaf2, preset.keyIntensity);
-  keyLight.position.set(-3.2, 9.5, 4.6);
+  keyLight.position.set(-4.6, 7.3, 3.2);
   keyLight.castShadow = true;
-  keyLight.shadow.mapSize.set(2048, 2048);
+  keyLight.shadow.mapSize.set(1024, 1024);
   keyLight.shadow.camera.near = 1;
   keyLight.shadow.camera.far = 24;
   const d = 5.8;
@@ -389,7 +415,7 @@ export function createStudioScene(theme = 'light') {
   keyLight.shadow.camera.bottom = -d;
   keyLight.shadow.bias = -0.0004;
   keyLight.shadow.normalBias = 0.015;
-  keyLight.shadow.radius = 7.5;
+  keyLight.shadow.radius = 10;
   scene.add(keyLight);
 
   // Soft cool fill light from right
@@ -416,8 +442,8 @@ export function createStudioScene(theme = 'light') {
 
   const applyTheme = (nextTheme) => {
     const p = STUDIO_THEMES[nextTheme === 'dark' ? 'dark' : 'light'];
-    scene.background = new THREE.Color(p.bgHex);
-    scene.environment = studio.getEnvironment(nextTheme);
+    scene.background = studio.getSweep(stock, nextTheme);
+    scene.environment = studio.environment;
     scene.environmentIntensity = p.envIntensity;
     keyLight.intensity = p.keyIntensity;
     fillLight.intensity = p.fillIntensity;

@@ -259,7 +259,7 @@ class FeedApp {
 
     try {
       this.sizeCanvasForSlide(slot.slideObj);
-      const mod = await import(entry.modulePath);
+      const [mod] = await Promise.all([import(entry.modulePath), studio.prepareLighting()]);
       // If unloaded while importing, abort cleanly
       if (this.instances.get(idx) !== slot) return;
 

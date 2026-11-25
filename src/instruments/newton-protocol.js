@@ -15,11 +15,11 @@ const HARD_PULL_THRESHOLD = 0.46; // radians (~26 deg): below = replay current, 
 const MAX_PULL_ANGLE = 1.12; // ~64 deg
 
 export async function createInstrument({ container, canvas, phraseStore, theme, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme);
+  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#c2b29a');
 
   // Studio 60mm portrait framing: cradle sits cleanly in upper-middle of square poster
   const camera = new THREE.PerspectiveCamera(27, 1, 0.1, 40);
-  camera.position.set(0.0, 2.04, 10.95);
+  camera.position.set(0.65, 2.28, 10.85);
   camera.lookAt(0.0, 1.30, 0.0);
 
   // Load Blender-modeled Draco GLB

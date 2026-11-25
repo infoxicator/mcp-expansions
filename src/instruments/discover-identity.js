@@ -7,12 +7,13 @@ const PACKET_NAMES = ['SOP', "SOP'", "SOP''"];
 const NODE_ROLES = ['NEAR · M', 'E-MARK · C', 'FAR · P'];
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme);
+  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#b29a7c');
 
   // Macro overhead product flat-lay camera framing VCONN terminal + all 3 cable identity nodes with balanced margins
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 55);
-  camera.position.set(0.16, 18.8, 3.85);
+  camera.position.set(0.28, 18.15, 4.60);
   camera.lookAt(0.16, 0.25, 0.0);
+  camera.rotateZ(THREE.MathUtils.degToRad(-13));
 
   const root = await studio.loadGLB('./assets/models/discover-identity.glb');
   scene.add(root);
