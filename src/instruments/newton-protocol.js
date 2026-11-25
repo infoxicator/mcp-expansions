@@ -344,10 +344,6 @@ export async function createInstrument({ container, canvas, phraseStore, theme, 
       }
     }
 
-    // Safety finish: if swing damped below threshold before all 3 words showed, reveal remaining cleanly
-    if (revealActive && totalEnergy < 0.08 && Math.abs(omega[0]) < 0.05 && Math.abs(omega[2]) < 0.05) {
-      while (revealedCount < 3) revealNextWord();
-    }
   }
 
   // Pointer interaction on canvas: drag M ball left to pull back, or gentle tap M ball to replay
@@ -410,7 +406,14 @@ export async function createInstrument({ container, canvas, phraseStore, theme, 
     isDragging = false;
     canvas.releasePointerCapture?.(e.pointerId);
     canvas.style.cursor = 'grab';
-    if (e.type === 'pointercancel') return;
+    if (e.type === 'pointercancel') {
+      theta.fill(0);
+      omega.fill(0);
+      revealActive = false;
+      applyPhraseWords(phraseStore.getState());
+      updateVisuals();
+      return;
+    }
 
     const pulled = Math.abs(theta[0]);
     if (!dragMoved || pulled < 0.14) {
