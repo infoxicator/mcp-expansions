@@ -1,4 +1,7 @@
-import http from 'node:http';
+import { writeFrames } from './recording.mjs';
+import { swipeNext } from './swipe.mjs';
+import assert from 'node:assert/strict';
+import { startServer } from './preview-server.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -24,39 +27,6 @@ const INSTRUMENTS = [
   { id: 'mechanical-typewriter', number: '12', title: 'Mechanical Typewriter' },
 ];
 
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.glb': 'model/gltf-binary',
-  '.wasm': 'application/wasm',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-};
-
-function startServer() {
-  return new Promise((resolve) => {
-    const server = http.createServer((req, res) => {
-      const cleanUrl = (req.url || '/').split('?')[0];
-      let filePath = path.join(ROOT, cleanUrl === '/' ? 'index.html' : cleanUrl);
-      if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-        res.writeHead(404);
-        res.end('Not found');
-        return;
-      }
-      const ext = path.extname(filePath).toLowerCase();
-      res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
-      fs.createReadStream(filePath).pipe(res);
-    });
-    server.listen(0, '127.0.0.1', () => {
-      const addr = server.address();
-      resolve({ server, baseUrl: `http://127.0.0.1:${addr.port}` });
-    });
-  });
-}
-
 async function waitReady(page, idx) {
   await page.waitForFunction(
     (i) => window.__MCP_FEED__ && window.__MCP_FEED__.isReady(i),
@@ -80,10 +50,6 @@ async function main() {
   const errors = [];
 
   try {
-    // Clean stale unnumbered stills so proof/final/stills holds exact 01..12 set
-    for (const f of fs.readdirSync(STILLS_DIR)) {
-      if (f.endsWith('.png')) fs.unlinkSync(path.join(STILLS_DIR, f));
-    }
 
     // ── 1. First-paint network payload budget check (< 5 MB) ──
     const budgetCtx = await browser.newContext({ viewport: { width: 1080, height: 1080 }, deviceScaleFactor: 1 });
@@ -127,6 +93,9 @@ async function main() {
         { waitUntil: 'networkidle' }
       );
       await waitReady(page, idx);
+      assert.equal(await page.locator('.fallback-plate').count(), 0);
+      assert.equal(await page.evaluate(() => window.__MCP_FEED__.getActiveId()), inst.id);
+      assert.equal(await page.evaluate(() => window.__MCP_FEED__.getPhrase().id), 'more-cake-please');
       await page.waitForTimeout(260);
       await page.screenshot({ path: outPath });
       stillPaths.push({ ...inst, file: `${inst.number}-${inst.id}.png`, outPath });
@@ -142,15 +111,25 @@ async function main() {
     await page.goto(`${baseUrl}/?i=combination-lock&w=Modern,Coffee,Protocol&theme=light`, { waitUntil: 'networkidle' });
     await waitReady(page, 10);
     const fallbackText = await page.locator('[data-poster-index="10"] .fallback-words').innerText();
+    assert.deepEqual(await page.locator('[data-poster-index="10"] .fallback-word').allTextContents(), ['Modern','Coffee','Protocol']);
     console.log('Verified reduced-motion + ?w= fallback:', fallbackText.replace(/\s+/g, ' '));
     await page.emulateMedia({ reducedMotion: 'no-preference' });
 
-    // Verify `/` Index drawer opens and has all 64 phrases
+    // Verify the visible catalog, category filter, search and selection.
     await page.goto(`${baseUrl}/?i=newton-protocol&p=more-cake-please&theme=light`, { waitUntil: 'networkidle' });
     await waitReady(page, 0);
     await page.keyboard.press('/');
     await page.waitForTimeout(200);
-    const drawerRows = await page.locator('.drawer-item, .index-row, [data-slug]').count();
+    const rows = page.locator('#drawerList .index-item');
+    const drawerRows = await rows.count();
+    const catalog = JSON.parse(fs.readFileSync(path.join(ROOT, 'phrases.json'), 'utf8'));
+    assert.equal(drawerRows, catalog.length);
+    await page.getByRole('button', { name: 'Skeptic', exact: true }).click();
+    assert.equal(await rows.count(), catalog.filter(p => p.category === 'skeptic').length);
+    await page.getByRole('searchbox').fill('Mythical Compatibility');
+    assert.equal(await rows.count(), 1);
+    await rows.first().click();
+    assert.equal(new URL(page.url()).searchParams.get('p'), 'mythical-compatibility-promise');
     console.log('Verified `/` Index drawer items:', drawerRows);
     await page.keyboard.press('Escape');
 
@@ -274,11 +253,11 @@ async function main() {
     await sheetCtx.close();
 
     // ── 4. Record full-feed swipe demo (proof/final/full-feed-demo.mp4) ──
-    const tmpFramesDir = path.join(ROOT, 'tmp', 'final-frames');
-    fs.rmSync(tmpFramesDir, { recursive: true, force: true });
-    fs.mkdirSync(tmpFramesDir, { recursive: true });
+    fs.mkdirSync(path.join(ROOT, 'tmp'), { recursive: true });
+    const tmpFramesDir = fs.mkdtempSync(path.join(ROOT, 'tmp', 'final-frames-'));
 
     const recCtx = await browser.newContext({
+      hasTouch: true,
       viewport: { width: 1080, height: 1080 },
       deviceScaleFactor: 1,
     });
@@ -316,41 +295,21 @@ async function main() {
       everyNthFrame: 1,
     });
 
-    // Instrument 01: Newton Protocol — hold 0.8s then pull & release M ball via Space!
-    await recPage.waitForTimeout(800);
-    await recPage.keyboard.press('Space');
-    await recPage.waitForTimeout(2600);
-
-    // Swipe down through Instruments 02..12, operating Destination Blind (08), Combination Lock (11), and Mechanical Typewriter (12)
-    for (let targetIdx = 1; targetIdx < INSTRUMENTS.length; targetIdx++) {
-      await recPage.keyboard.press('ArrowDown');
-      await waitReady(recPage, targetIdx);
-
-      if (targetIdx === 7) {
-        // Instrument 08: Destination Blind — let it settle then roll split-flaps via Space
-        await recPage.waitForTimeout(850);
-        await recPage.keyboard.press('Space');
-        await recPage.waitForTimeout(2200);
-      } else if (targetIdx === 10) {
-        // Instrument 11: Combination Lock — toggle dark mode briefly + spin tumblers!
-        await recPage.waitForTimeout(750);
-        await recPage.keyboard.press('t');
-        await recPage.waitForTimeout(650);
-        await recPage.keyboard.press('Space');
-        await recPage.waitForTimeout(1900);
-        await recPage.keyboard.press('t');
-        await recPage.waitForTimeout(500);
-      } else if (targetIdx === 11) {
-        // Instrument 12: Mechanical Typewriter — type a fresh phrase & carriage return!
-        await recPage.waitForTimeout(850);
-        await recPage.keyboard.press('Space');
-        await recPage.waitForTimeout(2400);
-      } else {
-        // Clean hold on each intermediate instrument so every single plate is clearly readable in the swipe demo
-        await recPage.waitForTimeout(1050);
+    await recPage.waitForTimeout(1200);
+    for (let idx = 1; idx < INSTRUMENTS.length; idx++) {
+      await swipeNext(recPage, cdp, idx);
+      await waitReady(recPage, idx);
+      if (idx === 1) {
+        await recPage.mouse.click(794, 555);
+        await recPage.waitForFunction(() => document.querySelector('[data-id="the-contract"] canvas')
+          ?.getAttribute('aria-label') === 'The Contract · More Cake Please');
       }
+      if (idx === 7) {
+        await recPage.keyboard.press('Space');
+        await recPage.waitForFunction(() => !window.__MCP_FEED__.getInstance(7).isMoving());
+      }
+      await recPage.waitForTimeout(1020);
     }
-
     const totalEndSec = (performance.now() - t0) / 1000;
     await cdp.send('Page.stopScreencast');
     await recPage.waitForTimeout(150);
@@ -358,20 +317,10 @@ async function main() {
     await recCtx.close();
 
     // Assemble H.264 MP4 with true real-time frame timing via concat demuxer
-    const concatPath = path.join(tmpFramesDir, 'frames.txt');
-    let concatTxt = '';
-    for (let i = 0; i < frameLog.length; i++) {
-      const nextTs = i + 1 < frameLog.length ? frameLog[i + 1].ts : totalEndSec;
-      const dur = Math.max(0.016, nextTs - frameLog[i].ts);
-      concatTxt += `file '${frameLog[i].fname}'\nduration ${dur.toFixed(4)}\n`;
-    }
-    if (frameLog.length > 0) {
-      concatTxt += `file '${frameLog[frameLog.length - 1].fname}'\n`;
-    }
-    fs.writeFileSync(concatPath, concatTxt);
+    const concatPath = writeFrames(tmpFramesDir, frameLog, totalEndSec);
 
     const outMp4 = path.join(FINAL_DIR, 'full-feed-demo.mp4');
-    execFileSync('/opt/homebrew/bin/ffmpeg', [
+    execFileSync('ffmpeg', [
       '-y',
       '-f', 'concat',
       '-safe', '0',
@@ -387,7 +336,7 @@ async function main() {
 
     // Extract a 4x3 filmstrip preview from the finished MP4 for quick visual inspection
     const filmstripPath = path.join(ROOT, 'tmp', 'demo-filmstrip.png');
-    execFileSync('/opt/homebrew/bin/ffmpeg', [
+    execFileSync('ffmpeg', [
       '-y',
       '-i', outMp4,
       '-vf', 'fps=12/26,scale=360:360,tile=4x3',
@@ -395,9 +344,9 @@ async function main() {
       filmstripPath,
     ], { stdio: 'pipe' });
 
-    fs.rmSync(tmpFramesDir, { recursive: true, force: true });
 
-    const durOut = execFileSync('/opt/homebrew/bin/ffprobe', [
+
+    const durOut = execFileSync('ffprobe', [
       '-v', 'error',
       '-show_entries', 'format=duration',
       '-of', 'default=noprint_wrappers=1:nokey=1',

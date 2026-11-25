@@ -1,4 +1,7 @@
-import http from 'node:http';
+import { writeFrames } from './recording.mjs';
+import { swipeNext } from './swipe.mjs';
+import assert from 'node:assert/strict';
+import { startServer } from './preview-server.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -7,39 +10,6 @@ import { chromium } from 'playwright-core';
 const ROOT = process.cwd();
 const OUT_DIR = path.join(ROOT, 'proof', 'phase1');
 fs.mkdirSync(OUT_DIR, { recursive: true });
-
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.glb': 'model/gltf-binary',
-  '.wasm': 'application/wasm',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-};
-
-function startServer() {
-  return new Promise((resolve) => {
-    const server = http.createServer((req, res) => {
-      const cleanUrl = (req.url || '/').split('?')[0];
-      let filePath = path.join(ROOT, cleanUrl === '/' ? 'index.html' : cleanUrl);
-      if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-        res.writeHead(404);
-        res.end('Not found');
-        return;
-      }
-      const ext = path.extname(filePath).toLowerCase();
-      res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
-      fs.createReadStream(filePath).pipe(res);
-    });
-    server.listen(0, '127.0.0.1', () => {
-      const addr = server.address();
-      resolve({ server, baseUrl: `http://127.0.0.1:${addr.port}` });
-    });
-  });
-}
 
 async function waitReady(page, idx = 0) {
   await page.waitForFunction(
@@ -117,24 +87,54 @@ async function main() {
     await waitReady(page, 0);
     await page.waitForTimeout(200);
     await page.screenshot({ path: path.join(OUT_DIR, '01-newton-protocol-fallback.png') });
+    await page.addInitScript(() => {
+      const native = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+        return type.includes('webgl') ? null : native.call(this, type, ...args);
+      };
+    });
     await page.emulateMedia({ reducedMotion: 'no-preference' });
 
     // Test deep links (?w= custom remix + no-webgl fallback)
-    await page.goto(`${baseUrl}/?i=the-contract&w=Mostly,Caffeinated,Pigeons&fallback=no-webgl`, { waitUntil: 'networkidle' });
+    await page.goto(`${baseUrl}/?i=the-contract&w=Mostly,Caffeinated,Pigeons`, { waitUntil: 'networkidle' });
     await waitReady(page, 1);
     const fallbackText = await page.locator('[data-poster-index="1"] .fallback-words').innerText();
+    assert.deepEqual(await page.locator('[data-poster-index="1"] .fallback-word').allTextContents(), ['Mostly','Caffeinated','Pigeons']);
+    assert.equal(new URL(page.url()).searchParams.get('w'), 'Mostly,Caffeinated,Pigeons');
     console.log('Verified ?w= + no-webgl fallback:', fallbackText.replace(/\s+/g, ' '));
 
     await stillCtx.close();
 
     // 2. Capture 16-18s Phase 1 video recording using CDP Page.startScreencast + system ffmpeg
-    const tmpFramesDir = path.join(ROOT, 'tmp', 'phase1-frames');
-    fs.rmSync(tmpFramesDir, { recursive: true, force: true });
-    fs.mkdirSync(tmpFramesDir, { recursive: true });
+    fs.mkdirSync(path.join(ROOT, 'tmp'), { recursive: true });
+    const tmpFramesDir = fs.mkdtempSync(path.join(ROOT, 'tmp', 'phase1-frames-'));
 
     const recCtx = await browser.newContext({
+      hasTouch: true,
       viewport: { width: 1080, height: 1080 },
       deviceScaleFactor: 1,
+    });
+    // Tap the actual Web Audio output so the steel impacts and relay clicks
+    // in the recording are the same signals a listener hears in the app.
+    await recCtx.addInitScript(() => {
+      const connect = AudioNode.prototype.connect;
+      const taps = new WeakMap();
+      AudioNode.prototype.connect = function(destination, ...args) {
+        if (destination === this.context.destination) {
+          let tap = taps.get(this.context);
+          if (!tap) {
+            tap = this.context.createMediaStreamDestination();
+            taps.set(this.context, tap);
+            const silence = this.context.createConstantSource();
+            silence.offset.value = 0;
+            silence.connect(tap);
+            silence.start();
+            window.proofAudio = new MediaRecorder(tap.stream, {mimeType:'audio/webm;codecs=opus'});
+          }
+          connect.call(this, tap);
+        }
+        return connect.call(this, destination, ...args);
+      };
     });
     const recPage = await recCtx.newPage();
     recPage.on('console', (msg) => {
@@ -149,6 +149,13 @@ async function main() {
     const cdp = await recCtx.newCDPSession(recPage);
     const frameLog = [];
     let frameIdx = 0;
+    await recPage.keyboard.press('s');
+    await recPage.waitForTimeout(250);
+    await recPage.evaluate(() => {
+      window.proofChunks = [];
+      window.proofAudio.ondataavailable = event => window.proofChunks.push(event.data);
+      window.proofAudio.start();
+    });
     const t0 = performance.now();
 
     cdp.on('Page.screencastFrame', async ({ data, sessionId }) => {
@@ -177,21 +184,25 @@ async function main() {
     await recPage.keyboard.press('Space');
     await recPage.waitForTimeout(4400);
 
-    // Smoothly snap-scroll down to Instrument 2 (The Contract) via keyboard ArrowDown
-    await recPage.keyboard.press('ArrowDown');
-    await recPage.waitForTimeout(1500);
+    // Smoothly snap-scroll down to Instrument 2 (The Contract) using a native touch swipe
+    await swipeNext(recPage, cdp, 1);
+    await recPage.waitForTimeout(1300);
 
-    // Plug in the right cable -> 5V -> 9V -> 15V -> 20V -> CONTRACT OK -> locks MORE / CAKE / PLEASE
-    await recPage.keyboard.press('Space');
-    await recPage.waitForTimeout(3400);
-
-    // Unplug the right cable
-    await recPage.keyboard.press('Space');
+    await recPage.mouse.click(795, 565);
+    await recPage.waitForFunction(() => document.querySelector('[data-id="the-contract"] canvas')
+      .getAttribute('aria-label') === 'The Contract · More Cake Please');
+    await recPage.waitForTimeout(1900);
+    await recPage.mouse.click(795, 565);
     await recPage.waitForTimeout(1200);
-
-    // Replug -> negotiates and locks a NEW phrase!
-    await recPage.keyboard.press('Space');
-    await recPage.waitForTimeout(4000);
+    await recPage.mouse.click(820, 570);
+    await recPage.waitForFunction(() => {
+      const meter = document.querySelector('[data-id="the-contract"] canvas');
+      const phrase = window.__MCP_FEED__.getPhrase();
+      return phrase.id !== 'more-cake-please' && meter.getAttribute('aria-label') ===
+        'The Contract · ' + phrase.cleanWords.join(' ');
+    });
+    await recPage.waitForTimeout(Math.max(900, 17500 - (performance.now() - t0)));
+    assert.notEqual(new URL(recPage.url()).searchParams.get('p'), 'more-cake-please');
 
     const totalEndSec = (performance.now() - t0) / 1000;
     await cdp.send('Page.stopScreencast');
@@ -199,20 +210,19 @@ async function main() {
 
     const finalUrl = recPage.url();
     console.log('Recording ended at URL:', finalUrl, 'frames:', frameLog.length);
+    const audioBytes = await recPage.evaluate(async () => {
+      const recording = new Promise(resolve => window.proofAudio.onstop = resolve);
+      window.proofAudio.stop();
+      await recording;
+      const data = new Blob(window.proofChunks);
+      return Array.from(new Uint8Array(await data.arrayBuffer()));
+    });
+    const audioPath = path.join(tmpFramesDir, 'sound.webm');
+    fs.writeFileSync(audioPath, Buffer.from(audioBytes));
     await recCtx.close();
 
     // Build ffmpeg concat list with real frame durations for true real-time playback speed
-    const concatPath = path.join(tmpFramesDir, 'frames.txt');
-    let concatTxt = '';
-    for (let i = 0; i < frameLog.length; i++) {
-      const nextTs = i + 1 < frameLog.length ? frameLog[i + 1].ts : totalEndSec;
-      const dur = Math.max(0.016, nextTs - frameLog[i].ts);
-      concatTxt += `file '${frameLog[i].fname}'\nduration ${dur.toFixed(4)}\n`;
-    }
-    if (frameLog.length > 0) {
-      concatTxt += `file '${frameLog[frameLog.length - 1].fname}'\n`;
-    }
-    fs.writeFileSync(concatPath, concatTxt);
+    const concatPath = writeFrames(tmpFramesDir, frameLog, totalEndSec);
 
     const outMp4 = path.join(OUT_DIR, 'phase1-demo.mp4');
     execFileSync('ffmpeg', [
@@ -220,6 +230,8 @@ async function main() {
       '-f', 'concat',
       '-safe', '0',
       '-i', concatPath,
+      '-i', audioPath,
+      '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '128k',
       '-vf', 'fps=30,scale=1080:1080:flags=lanczos',
       '-c:v', 'libx264',
       '-pix_fmt', 'yuv420p',
@@ -228,7 +240,7 @@ async function main() {
       outMp4,
     ], { stdio: 'inherit' });
 
-    fs.rmSync(tmpFramesDir, { recursive: true, force: true });
+
 
     const durOut = execFileSync('ffprobe', [
       '-v', 'error',
@@ -236,6 +248,7 @@ async function main() {
       '-of', 'default=noprint_wrappers=1:nokey=1',
       outMp4,
     ]).toString().trim();
+    assert.ok(Number(durOut) >= 15 && Number(durOut) <= 20, 'Phase 1 duration '+durOut);
     console.log(`Saved ${outMp4} (duration: ${durOut}s)`);
 
     if (errors.length) {

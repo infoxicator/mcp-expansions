@@ -58,7 +58,7 @@ python3 -m http.server 8000 --bind 127.0.0.1
 
 ### Browser verification
 
-With the local server running, use `node scripts/check-feed.mjs http://127.0.0.1:8000` to exercise the live mechanisms, snap navigation, phrase links and motion preference. The two capture scripts start their own loopback server. They use the project’s Playwright dependency, local Chrome and FFmpeg.
+Run `npm test` to start a temporary loopback server and exercise the live mechanisms, snap navigation, phrase links and motion preference. The two capture scripts start their own loopback server. They use the project’s Playwright dependency, local Chrome and FFmpeg.
 
 ```sh
 node scripts/capture_phase1.mjs
