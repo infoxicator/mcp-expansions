@@ -76,6 +76,18 @@ class FeedApp {
     this.totalCountEl.textContent = String(this.phraseStore.phrases.length);
     this.buildSlidesAndRail();
     this.bindEvents();
+    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => {
+      const reason = getFallbackReason();
+      if (reason === this.fallbackReason) return;
+      this.fallbackReason = reason;
+      for (const slot of this.instances.values()) {
+        slot.api?.dispose?.();
+        slot.host.remove();
+        slot.slideObj.frame.classList.remove('is-ready');
+      }
+      this.instances.clear();
+      this.updateActiveWindow();
+    });
 
     // Jump immediately to initial instrument without scroll animation
     this.scrollToInstrument(this.activeIndex, { instant: true });
@@ -106,9 +118,7 @@ class FeedApp {
       isReady: (idx = this.activeIndex) => this.instances.get(idx)?.state === 'ready',
     };
 
-    if (!this.fallbackReason) {
-      requestAnimationFrame((ts) => this.tick(ts));
-    }
+    requestAnimationFrame((ts) => this.tick(ts));
   }
 
   initTheme(queryTheme) {
@@ -177,7 +187,6 @@ class FeedApp {
       slide.innerHTML = `
         <div class="poster-column">
           <div class="poster-frame" data-poster-index="${idx}">
-            <canvas class="poster-canvas" aria-label="${entry.title} interactive instrument"></canvas>
             <div class="poster-loading">Loading</div>
           </div>
           <div class="poster-caption">
@@ -195,8 +204,7 @@ class FeedApp {
       `;
 
       const frame = slide.querySelector('.poster-frame');
-      const canvas = slide.querySelector('.poster-canvas');
-      this.slides.push({ el: slide, frame, canvas, entry });
+      this.slides.push({ el: slide, frame, entry });
       slideFrag.appendChild(slide);
 
       // Right vertical navigation rail pip
@@ -232,18 +240,25 @@ class FeedApp {
 
     const slideObj = this.slides[idx];
     const entry = slideObj.entry;
-    const slot = { state: 'loading', api: null, slideObj };
+    const host = document.createElement('div');
+    host.className = 'instrument-surface';
+    slideObj.frame.appendChild(host);
+    const canvas = document.createElement('canvas');
+    canvas.className = 'poster-canvas';
+    canvas.setAttribute('aria-label', entry.title);
+    host.appendChild(canvas);
+    const slot = { state: 'loading', api: null, host, slideObj: { ...slideObj, canvas } };
     this.instances.set(idx, slot);
 
     if (this.fallbackReason) {
-      slot.api = mountFallbackInstrument(slideObj.frame, entry, this.phraseStore, this.fallbackReason);
+      slot.api = mountFallbackInstrument(host, entry, this.phraseStore, this.fallbackReason);
       slot.state = 'ready';
       slideObj.frame.classList.add('is-ready');
       return;
     }
 
     try {
-      this.sizeCanvasForSlide(slideObj);
+      this.sizeCanvasForSlide(slot.slideObj);
       const mod = await import(entry.modulePath);
       // If unloaded while importing, abort cleanly
       if (this.instances.get(idx) !== slot) return;
@@ -253,15 +268,15 @@ class FeedApp {
         new URLSearchParams(window.location.search).get('settled') === '1'
       );
 
+      const mountTheme = this.theme;
+      const mountPhrase = this.phraseStore.getState().text;
       const api = await mod.createInstrument({
-        container: slideObj.frame,
-        canvas: slideObj.canvas,
+        container: host,
+        canvas,
         phraseStore: this.phraseStore,
         theme: this.theme,
         startSettled,
-        onReady: () => {
-          slideObj.frame.classList.add('is-ready');
-        },
+
       });
 
       if (this.instances.get(idx) !== slot) {
@@ -269,14 +284,17 @@ class FeedApp {
         return;
       }
 
+      if (this.theme !== mountTheme) api.setTheme(this.theme);
+      if (this.phraseStore.getState().text !== mountPhrase) api.setPhrase(this.phraseStore.getState());
       slot.api = api;
       slot.state = 'ready';
       slideObj.frame.classList.add('is-ready');
       // Render initial frame immediately so neighbor slides look sharp before scrolling into view
       api.render(0);
     } catch (err) {
+      if (this.instances.get(idx) !== slot) return;
       console.error(`Instrument ${entry.id} failed to load:`, err);
-      slot.api = mountFallbackInstrument(slideObj.frame, entry, this.phraseStore, 'no-webgl');
+      slot.api = mountFallbackInstrument(host, entry, this.phraseStore, 'no-webgl');
       slot.state = 'ready';
       slideObj.frame.classList.add('is-ready');
     }
@@ -298,10 +316,11 @@ class FeedApp {
       }
     }
 
-    // Dispose instruments far away (> 3 slides) to keep memory footprint tiny on large feeds
+    // Keep only the active spread alive, including in-flight loads.
     for (const [idx, slot] of this.instances.entries()) {
-      if (Math.abs(idx - this.activeIndex) > 3 && slot.state === 'ready') {
+      if (Math.abs(idx - this.activeIndex) > 1) {
         slot.api?.dispose?.();
+        slot.host.remove();
         this.instances.delete(idx);
         slot.slideObj.frame.classList.remove('is-ready');
       }
@@ -349,7 +368,7 @@ class FeedApp {
     const dt = Math.min((ts - this.lastFrameTs) / 1000, 0.05);
     this.lastFrameTs = ts;
 
-    if (!document.hidden && !this.isDrawerOpen) {
+    if (!document.hidden && !this.isDrawerOpen && !this.fallbackReason) {
       // Determine which mounted slides are actually visible in viewport right now
       const viewTop = this.feedEl.scrollTop;
       const viewBottom = viewTop + this.feedEl.clientHeight;
@@ -400,17 +419,24 @@ class FeedApp {
 
   // Index drawer
   openDrawer() {
+    this.drawerTrigger = document.activeElement;
+    this.indexDrawer.inert = false;
+    for (const region of [this.feedEl, this.railEl, this.indexToggle.closest('header')]) region.inert = true;
     this.isDrawerOpen = true;
     this.indexDrawer.classList.add('is-open');
     this.drawerBackdrop.classList.add('is-open');
     this.indexDrawer.setAttribute('aria-hidden', 'false');
     this.indexToggle.setAttribute('aria-expanded', 'true');
     this.renderDrawerList();
-    setTimeout(() => this.searchInput.focus(), 60);
+    this.searchInput.focus();
   }
 
   closeDrawer() {
     this.isDrawerOpen = false;
+    for (const region of [this.feedEl, this.railEl, this.indexToggle.closest('header')]) region.inert = false;
+    this.indexDrawer.inert = true;
+    const trigger = this.drawerTrigger === document.body ? this.indexToggle : this.drawerTrigger;
+    trigger?.focus({ preventScroll: true });
     this.indexDrawer.classList.remove('is-open');
     this.drawerBackdrop.classList.remove('is-open');
     this.indexDrawer.setAttribute('aria-hidden', 'true');
@@ -560,7 +586,8 @@ class FeedApp {
         this.closeDrawer();
         return;
       }
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (this.isDrawerOpen || tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (tag === 'BUTTON' && e.code === 'Space') return;
 
       if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') {
         e.preventDefault();

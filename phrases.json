@@ -382,5 +382,131 @@
     "words": ["Model", "Context", "Protocol"],
     "note": "Fine, okay — just this once, the actual name.",
     "category": "protocol"
+  },
+  {
+    "id": "marketing-charged-protocol",
+    "words": ["Marketing", "Charged", "Protocol"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "mythical-compatibility-promise",
+    "words": ["Mythical", "Compatibility", "Promise"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "manufactured-complexity-pipeline",
+    "words": ["Manufactured", "Complexity", "Pipeline"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "minimum-charming-pitch",
+    "words": ["Minimum", "Charming", "Pitch"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "monetizable-context-platform",
+    "words": ["Monetizable", "Context", "Platform"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "modestly-convenient-plumbing",
+    "words": ["Modestly", "Convenient", "Plumbing"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "merely-another-protocol",
+    "words": ["Merely", "Another", "Protocol"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "mostly-copy-paste",
+    "words": ["Mostly", "Copy", "Paste"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "mentored-crash-program",
+    "words": ["Mentored", "Crash", "Program"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "mandatory-certification-program",
+    "words": ["Mandatory", "Certification", "Program"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "motivational-closing-platitude",
+    "words": ["Motivational", "Closing", "Platitude"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "monetized-contrarian-persona",
+    "words": ["Monetized", "Contrarian", "Persona"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "mutual-congratulations-panel",
+    "words": ["Mutual", "Congratulations", "Panel"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "medium-celebrity-prophet",
+    "words": ["Medium", "Celebrity", "Prophet"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "miraculous-conference-prototype",
+    "words": ["Miraculous", "Conference", "Prototype"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "memorized-click-path",
+    "words": ["Memorized", "Click", "Path"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "mirage-capability-preview",
+    "words": ["Mirage", "Capability", "Preview"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "midcycle-correction-pending",
+    "words": ["Midcycle", "Correction", "Pending"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "multivendor-compatibility-prayer",
+    "words": ["Multivendor", "Compatibility", "Prayer"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "monthly-consultant-premium",
+    "words": ["Monthly", "Consultant", "Premium"],
+    "note": "",
+    "category": "skeptic"
+  },
+  {
+    "id": "make-believe-compliance-pantomime",
+    "words": ["Make-believe", "Compliance", "Pantomime"],
+    "note": "",
+    "category": "skeptic"
   }
 ]

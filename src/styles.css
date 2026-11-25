@@ -220,6 +220,11 @@ body {
   -webkit-user-select: none;
 }
 
+.instrument-surface {
+  position: absolute;
+  inset: 0;
+}
+
 .poster-canvas {
   display: block;
   width: 100%;
@@ -606,6 +611,7 @@ body {
 }
 
 .filter-row {
+  flex-wrap: wrap;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;

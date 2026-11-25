@@ -50,7 +50,7 @@
         title="Browse all phrases (/)"
       >
         <span>Index</span>
-        <span class="count-pill" id="totalCount">64</span>
+        <span class="count-pill" id="totalCount"></span>
       </button>
 
       <button
@@ -71,7 +71,7 @@
 
   <!-- Preserved / Index Drawer -->
   <div class="drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
-  <aside class="drawer" id="indexDrawer" aria-label="All MCP expansions" aria-hidden="true">
+  <aside class="drawer" id="indexDrawer" inert role="dialog" aria-modal="true" aria-label="All MCP expansions" aria-hidden="true">
     <div class="drawer-head">
       <h2 class="drawer-title">All Expansions</h2>
       <button type="button" class="drawer-close" id="drawerClose">Esc</button>
@@ -81,7 +81,7 @@
       <input
         type="search"
         class="search-input"
-        id="searchInput"
+        id="searchInput" aria-label="Filter phrases or notes"
         placeholder="Filter phrases or notes…"
         autocomplete="off"
         spellcheck="false"
@@ -92,14 +92,15 @@
         <button type="button" class="filter-pill" data-cat="protocol" aria-pressed="false">Protocol</button>
         <button type="button" class="filter-pill" data-cat="dev" aria-pressed="false">Dev</button>
         <button type="button" class="filter-pill" data-cat="absurd" aria-pressed="false">Absurd</button>
+        <button type="button" class="filter-pill" data-cat="skeptic" aria-pressed="false">Skeptic</button>
       </div>
     </div>
 
-    <div class="drawer-list" id="drawerList" role="list"></div>
+    <div class="drawer-list" id="drawerList" aria-label="Matching phrases"></div>
 
     <div class="drawer-foot">
       <span>Community list in <code>phrases.json</code></span>
-      <span id="drawerShowing">64 entries</span>
+      <span id="drawerShowing"></span>
     </div>
   </aside>
 
