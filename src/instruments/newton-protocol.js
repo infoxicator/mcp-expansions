@@ -412,6 +412,7 @@ export async function createInstrument({ container, canvas, phraseStore, theme, 
       revealActive = false;
       applyPhraseWords(phraseStore.getState());
       updateVisuals();
+      studio.renderToCanvas(scene, camera, canvas, currentTheme);
       return;
     }
 

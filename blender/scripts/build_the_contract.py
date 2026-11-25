@@ -313,17 +313,35 @@ def add_plug_and_cable(prefix, direction, base_x, z_mid, mat_overmold, mat_strai
             mat=mat_strain,
             parent=parent,
         )
-        # Real brushed stainless USB-C male nose (8.34mm x 2.56mm proportions)
-        add_stadium_extrude_x(
-            f"{prefix}_USBC_Steel",
-            length_x=0.52,
-            width_y=0.49,
-            height_z=0.16,
-            location=(base_x - direction * 0.28, 0.0, z_mid),
-            end_bevel=0.018,
-            mat=mat_steel,
-            parent=parent,
-        )
+        # A folded stainless sleeve, open at the nose. The insert and contacts
+        # sit behind the front lip and become visible when the plug withdraws.
+        nose = base_x - direction * .54
+        shell = add_stadium_extrude_x(f"{prefix}_USBC_Steel", .52, .49, .16,
+                    (base_x-direction*.28, 0, z_mid), end_bevel=.012,
+                    mat=mat_steel, parent=parent)
+        bm = bmesh.new()
+        bm.from_mesh(shell.data)
+        front = min(bm.faces, key=lambda f: direction * f.calc_center_median().x)
+        bm.faces.remove(front)
+        bm.to_mesh(shell.data)
+        bm.free()
+        wall = shell.modifiers.new("Rolled sheet", "SOLIDIFY")
+        wall.thickness = .010
+        bpy.context.view_layer.objects.active = shell
+        bpy.ops.object.modifier_apply(modifier=wall.name)
+        insert = make_material("PlugInsert", (.018,.019,.021), roughness=.62)
+        contact = make_material("ConnectorContact", (.78,.57,.23), metallic=.9, roughness=.32)
+        add_stadium_extrude_x(f"{prefix}_Insert", .12, .45, .12,
+                      (nose+direction*.105,0,z_mid), end_bevel=.007, mat=insert, parent=parent)
+        for lane in range(12):
+            add_beveled_box(f"{prefix}_Contact{lane}", (.045,.012,.007),
+                       (nose+direction*.079,(lane-5.5)*.03,z_mid+.061),
+                       bevel_width=.002,segments=2,mat=contact,parent=parent)
+        # Two shallow witness marks where the metal crimps onto the insert.
+        for side in (-1,1):
+            add_beveled_box(f"{prefix}_Stake{side}", (.026,.079,.002),
+                       (base_x-direction*.126,.098*side,z_mid+.081),
+                       bevel_width=.001,segments=2,mat=insert,parent=parent)
 
     # Pale grey matte silicone/TPE cable sweeping gently off frame
     c0 = base_x + direction * (overmold_len + 0.42)

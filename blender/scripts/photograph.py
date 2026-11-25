@@ -34,6 +34,11 @@ PROJECTED = {"the-contract": ("RightPlugRoot",), "discover-identity": ("CableAss
 
 
 def moving_surface(obj, name):
+    # Metal inside a mated port sees very little light. Shade it live as it emerges.
+    if name in ("the-contract", "discover-identity") and any(
+            m and m.name in ("USBC_Stainless","USBC_Steel","PlugInsert","ConnectorContact")
+            for m in obj.data.materials):
+        return False
     if any(m and (m.name.startswith(("SpecLed","NodeScreen")) or m.name in LIVE_MATERIALS)
            for m in obj.data.materials):
         return False
