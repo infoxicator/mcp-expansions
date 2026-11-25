@@ -123,6 +123,10 @@ export async function createInstrument({ container, canvas, phraseStore, theme, 
     <span class="newton-word is-revealed" data-slot="2"></span>
   `;
   container.appendChild(wordLayer);
+  const caption = document.createElement('span');
+  caption.className = 'instrument-fineprint';
+  caption.textContent = 'click to clack · MCP turns 2';
+  container.appendChild(caption);
   const wordEls = [
     wordLayer.querySelector('[data-slot="0"]'),
     wordLayer.querySelector('[data-slot="1"]'),
@@ -231,7 +235,23 @@ export async function createInstrument({ container, canvas, phraseStore, theme, 
     wordEls.forEach((el) => el.classList.remove('is-revealed'));
   }
 
+  const filmPoint = new THREE.Vector3();
+  const filmEdge = new THREE.Vector3();
+  scene.userData.shutter = new THREE.Vector4();
   function updateVisuals() {
+    // Project the moving end sphere over a 1/38 s exposure. The lettering below
+    // the hardware remains sharp, as do the two stationary spheres.
+    const end = Math.abs(omega[2]) > Math.abs(omega[0]) ? 2 : 0;
+    const angle = theta[end];
+    const previous = angle - omega[end]/38;
+    const project = (v, a) => v.set(BALL_XS[end]+PENDULUM_L*Math.sin(a),
+      PIVOT_Y-PENDULUM_L*Math.cos(a), 0).project(camera);
+    project(filmPoint, angle);
+    project(filmEdge, previous);
+    const shutter = scene.userData.shutter;
+    shutter.set(.5+.5*filmPoint.x,.5+.5*filmPoint.y,
+      .5*(filmPoint.x-filmEdge.x),.5*(filmPoint.y-filmEdge.y));
+    scene.userData.shutterRadius = Math.abs(omega[end]) > .09 ? .091+Math.hypot(shutter.z,shutter.w) : 0;
     for (let i = 0; i < 3; i++) {
       const a = theta[i];
       const bx = BALL_XS[i] + PENDULUM_L * Math.sin(a);
@@ -483,6 +503,7 @@ export async function createInstrument({ container, canvas, phraseStore, theme, 
       canvas.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointercancel', onPointerUp);
       wordLayer.remove();
+      caption.remove();
       scene.traverse((obj) => {
         if (obj.geometry && obj.geometry !== threadGeo) obj.geometry.dispose();
         if (obj.material) {

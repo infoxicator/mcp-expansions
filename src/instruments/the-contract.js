@@ -16,7 +16,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'the-contract');
 
   // Product-photography macro flat-lay framing: matchbox meter centered (macro crop) flanked by both pale grey USB-C plugs & cables
-  const camera = new THREE.PerspectiveCamera(21.5, 1, 0.1, 45);
+  const camera = new THREE.PerspectiveCamera(23.5, 1, 0.1, 45);
   camera.position.set(1.40, 13.55, 5.90);
   camera.lookAt(0.26, 0.28, 0.0);
   camera.rotateZ(THREE.MathUtils.degToRad(1));
@@ -130,7 +130,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     } else if (matName === 'CablePaleGreyOvermold' || matName === 'CablePaleGreyStrain' || matName === 'CablePaleGreyJacket') {
       const isStrain = matName === 'CablePaleGreyStrain';
       obj.material = new THREE.MeshPhysicalMaterial({
-        color: isStrain ? 0xaeadac : 0xaaa9a5,
+        color: isStrain ? 0x202020 : 0xe6e5df,
         metalness: 0.0,
         roughness: isStrain ? 0.78 : 0.72,
         roughnessMap: cableTex,
@@ -185,11 +185,11 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
   function drawPixelGrid(ctx, w, h) {
     ctx.save();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.26)';
-    for (let y = 0; y < h; y += 4) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.48)';
+    for (let y = 0; y < h; y += 6) {
       ctx.fillRect(0, y, w, 1);
     }
-    for (let x = 0; x < w; x += 4) {
+    for (let x = 0; x < w; x += 6) {
       ctx.fillRect(x, 0, 1, h);
     }
     ctx.restore();

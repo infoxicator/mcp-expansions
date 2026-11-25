@@ -25,7 +25,7 @@ LIVE_MATERIALS = {
     "CipherFaceplate","OledScreenMat","OledCoverGlass","LedVconn","TerminalLabel",
     "LegendPlateMat","LedCC1","LedCC2","DrawerHeaderMat","DrawerReadoutMat","SolariBezelDecal",
 }
-PAPER = {'cipher-machine': '868775', 'combination-lock': 'ba9b68', 'destination-blind': '87969d', 'discover-identity': 'b29a7c', 'dymo-embosser': '8baca0', 'flip-contract': 'bb7453', 'jacket-legend': '9caac4', 'letterpress-lockup': 'b7a59e', 'mechanical-typewriter': 'a2a59a', 'newton-protocol': 'c2b29a', 'specimen-drawer': 'a69887', 'the-contract': '81949a'}
+PAPER = {'cipher-machine': '4a4135', 'combination-lock': 'ba9b68', 'destination-blind': '87969d', 'discover-identity': 'b29a7c', 'dymo-embosser': '8baca0', 'flip-contract': 'bb7453', 'jacket-legend': 'd1b997', 'letterpress-lockup': 'b7a59e', 'mechanical-typewriter': 'a2a59a', 'newton-protocol': 'ede3c9', 'specimen-drawer': 'a69887', 'the-contract': 'c8c2b5'}
 
 # These groups translate without rotating. Project their measured radiance onto
 # the live meshes; occlusion, parallax and socket insertion still use real depth.
@@ -67,10 +67,11 @@ def save_radiance(exr, destination):
 
 
 FINISH = {
-    "MeterMatteBlack": ("292b2d", .14, .56), "MeterBezel": ("151619", .28, .36),
-    "CablePaleGreyOvermold": ("bdbdbb", 0, .61), "CablePaleGreyJacket": ("b9bab8", 0, .66),
-    "CablePaleGreyStrain": ("afb0ae", 0, .68), "MicroButton": ("333536", .72, .36),
-    "CipherChassis": ("343a34", .28, .52), "CipherDeck": ("232925", .4, .39),
+    "MeterMatteBlack": ("141619", .10, .52), "MeterBezel": ("151619", .28, .36),
+    "CablePaleGreyOvermold": ("eeede6", 0, .61), "CablePaleGreyJacket": ("e6e5df", 0, .66),
+    "CablePaleGreyStrain": ("202020", 0, .59), "MicroButton": ("333536", .72, .36),
+    "PlugAnodizedAlu": ("252626", .46, .44), "PlugMatteTPE": ("20201e", 0, .59),
+    "CipherChassis": ("553020", .0, .34), "CipherDeck": ("1b1b1a", .22, .37),
     "MatteAnodizedBlack": ("2b2c2b", .64, .50), "FrameMatteBlack": ("242626", .45, .48),
     "BaseGraphiteInset": ("363836", .40, .56), "GunmetalCollar": ("4d5152", .85, .32),
     "BlockMatteBlack": ("394247", .36, .55), "TerminalMatteAlu": ("303332", .6, .51),
@@ -115,7 +116,7 @@ def finish(mat):
     ramp.inputs["To Max"].default_value = min(1, roughness+.12)
     link(noise.outputs["Fac"], ramp.inputs["Value"])
     link(ramp.outputs["Result"], bsdf.inputs["Roughness"])
-    if mat.name == "CherryFurniture":
+    if mat.name in ("CherryFurniture","CipherChassis"):
         mapping = nodes.new("ShaderNodeVectorMath")
         mapping.operation = "MULTIPLY"
         mapping.inputs[1].default_value = (1, 37, 13)
@@ -125,14 +126,14 @@ def finish(mat):
         grain.inputs["Distortion"].default_value = .24
         link(mapping.outputs[0], grain.inputs[0])
         rings = nodes.new("ShaderNodeValToRGB")
-        rings.color_ramp.elements[0].color = (*rgb("774627"),1)
-        rings.color_ramp.elements[1].color = (*rgb("c79f77"),1)
+        rings.color_ramp.elements[0].color = (*rgb("321a0b" if mat.name == "CipherChassis" else "774627"),1)
+        rings.color_ramp.elements[1].color = (*rgb("98552e" if mat.name == "CipherChassis" else "c79f77"),1)
         link(grain.outputs["Fac"], rings.inputs[0])
         link(rings.outputs[0], bsdf.inputs["Base Color"])
 
 
 def is_live(obj):
-    if obj.name.startswith(("FlapAxle", "FlapBushing")):
+    if obj.name == "CoilStock" or obj.name.startswith(("FlapAxle", "FlapBushing")):
         return True
     if any(m and m.name in LIVE_MATERIALS for m in obj.data.materials):
         return True
@@ -176,6 +177,9 @@ def photograph(source):
             obj.hide_render = True
         else:
             fixed.append(obj.name)
+        if obj.name == "CoilStock":
+            obj.hide_render = False
+            obj.visible_camera = False
         if actors:
             obj.hide_render = False
             obj.visible_camera = obj.name in projected
@@ -203,6 +207,16 @@ def photograph(source):
     bsdf.inputs["Specular IOR Level"].default_value = .14
     mesh.materials.append(paper)
     stock = PAPER[name]
+    if name in ("the-contract", "jacket-legend"):
+        # Lapped limestone and felt exhibit broad tonal variation as well as tooth.
+        nodes, link = paper.node_tree.nodes, paper.node_tree.links.new
+        cloud = nodes.new("ShaderNodeTexNoise")
+        cloud.inputs["Scale"].default_value = 2.5 if name == "the-contract" else 180
+        cloud.inputs["Detail"].default_value = 4
+        link(nodes.get("Texture Coordinate").outputs["Object"], cloud.inputs["Vector"])
+        surface_tint = nodes.new("ShaderNodeValToRGB")
+        link(cloud.outputs["Fac"], surface_tint.inputs[0])
+        link(surface_tint.outputs[0], bsdf.inputs["Base Color"])
     camera = bpy.data.cameras.new('Product lens')
     camera.sensor_fit = 'HORIZONTAL'
     camera.angle = math.radians(float(re.search(r'PerspectiveCamera\(([\d.]+)',js).group(1)))
@@ -285,6 +299,15 @@ def photograph(source):
         bsdf.inputs["Base Color"].default_value = tuple(v*(1 if mode=='light' else .055) for v in rgb(stock))+(1,)
         key.energy = 790 if mode=='light' else 585
         fill.energy = 210 if mode=='light' else 155
+        if name in ("the-contract","jacket-legend"):
+            color = bsdf.inputs["Base Color"].default_value
+            spread = .13 if name == "the-contract" else .23
+            for i, stop in enumerate(surface_tint.color_ramp.elements):
+                stop.color = tuple(color[j]*(1 + (2*i-1)*spread) for j in range(3)) + (1,)
+        if name == "cipher-machine":
+            key.energy *= .73
+            fill.energy *= .33
+            world.nodes["Background"].inputs["Strength"].default_value = .23
         scene.render.filepath = str((dest/(mode+'.webp')).resolve())
         if actors:
             scene.render.film_transparent = True

@@ -195,6 +195,7 @@ class StudioRuntime {
           photograph: { value: null }, frame: { value: this.negative.texture }, depth: { value: depth },
           pixel: { value: new THREE.Vector2() }, focus: { value: 1 },
           clip: { value: new THREE.Vector2() },
+          shutter: { value: new THREE.Vector4() }, shutterRadius: {value: 0},
         },
         vertexShader: `
           varying vec2 coord;
@@ -203,7 +204,8 @@ class StudioRuntime {
         fragmentShader: `
           uniform sampler2D frame, depth, photograph;
           uniform vec2 pixel, clip;
-          uniform float focus;
+          uniform float focus, shutterRadius;
+          uniform vec4 shutter;
           varying vec2 coord;
           void main() {
             float z = texture2D(depth, coord).r;
@@ -213,6 +215,13 @@ class StudioRuntime {
             for (int i = 0; i < 6; i++) {
               float a = float(i) * 1.047198;
               sampleColor += .1 * texture2D(frame, coord + vec2(cos(a), sin(a)) * pixel * radius);
+            }
+            if (shutterRadius > 0. && length(coord-shutter.xy) < shutterRadius) {
+              vec4 exposure = vec4(0.);
+              for (int i=0; i<9; i++) {
+                exposure += texture2D(frame, coord+shutter.zw*(float(i)/8.-.5));
+              }
+              sampleColor = exposure/9.;
             }
             gl_FragColor = vec4(sampleColor.rgb / max(sampleColor.a, .0001), 1.);
             #include <tonemapping_fragment>
@@ -230,6 +239,8 @@ class StudioRuntime {
     }
     this.negative.setSize(w, h);
     const uniforms = this.lens.material.uniforms;
+    uniforms.shutterRadius.value = scene.userData.shutterRadius || 0;
+    if (uniforms.shutterRadius.value) uniforms.shutter.value.copy(scene.userData.shutter);
     uniforms.photograph.value = scene.userData.photograph;
     uniforms.depth.value = this.negative.depthTexture;
     uniforms.pixel.value.set(1 / w, 1 / h);

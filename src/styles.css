@@ -411,7 +411,7 @@ body {
   position: absolute;
   left: 6%;
   right: 6%;
-  bottom: 9.5%;
+  bottom: 9%;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   align-items: baseline;
@@ -420,7 +420,7 @@ body {
   pointer-events: none;
   font-family: var(--serif);
   font-size: clamp(28px, 5.4%, 56px);
-  font-size: calc(var(--poster-size) * 0.072);
+  font-size: calc(var(--poster-size) * 0.085);
   line-height: 1.05;
   letter-spacing: -0.02em;
   color: var(--ink);
@@ -781,4 +781,20 @@ body.is-poster-only .poster-frame {
   .feed {
     scroll-behavior: auto;
   }
+}
+
+.newton-word:not(:last-child) { -webkit-text-stroke: .012em currentColor; }
+.instrument-fineprint {
+  position: absolute;
+  inset: auto 0 3.8%;
+  text-align: center;
+  font: 400 clamp(8px, calc(var(--poster-size) * .013), 14px)/1.2 var(--mono);
+  letter-spacing: .045em;
+  color: var(--ink);
+  pointer-events: none;
+}
+[data-id="cipher-machine"] .instrument-fineprint {
+  inset: auto 4% 4% auto;
+  writing-mode: vertical-rl;
+  color: #e4d5b5;
 }
