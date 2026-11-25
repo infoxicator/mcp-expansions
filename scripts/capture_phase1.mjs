@@ -52,6 +52,13 @@ async function main() {
     await page.waitForTimeout(250);
     await page.screenshot({ path: path.join(OUT_DIR, '01-newton-protocol-rest.png') });
 
+    // The return swing after the third impact keeps the complete phrase in view.
+    await page.keyboard.press('Space');
+    await page.waitForFunction(() => document.querySelectorAll('.newton-word.is-revealed').length === 0);
+    await page.waitForFunction(() => document.querySelectorAll('.newton-word.is-revealed').length === 3);
+    await page.waitForTimeout(1040);
+    await page.screenshot({ path: path.join(OUT_DIR, '01-newton-protocol-swing.png') });
+
     // Still 1 dark
     await page.goto(`${baseUrl}/?i=newton-protocol&p=more-cake-please&poster=1&theme=dark`, { waitUntil: 'networkidle' });
     await waitReady(page, 0);

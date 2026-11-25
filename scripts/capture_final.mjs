@@ -126,10 +126,10 @@ async function main() {
     assert.equal(drawerRows, catalog.length);
     await page.getByRole('button', { name: 'Skeptic', exact: true }).click();
     assert.equal(await rows.count(), catalog.filter(p => p.category === 'skeptic').length);
-    await page.getByRole('searchbox').fill('Mythical Compatibility');
+    await page.getByRole('searchbox').fill('Merely Ceremonial');
     assert.equal(await rows.count(), 1);
     await rows.first().click();
-    assert.equal(new URL(page.url()).searchParams.get('p'), 'mythical-compatibility-promise');
+    assert.equal(new URL(page.url()).searchParams.get('p'), 'merely-ceremonial-protocol');
     console.log('Verified `/` Index drawer items:', drawerRows);
     await page.keyboard.press('Escape');
 
