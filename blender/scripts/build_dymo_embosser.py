@@ -259,6 +259,11 @@ def build():
         backing.material_offset_rim = 1
         bpy.context.view_layer.objects.active = strip
         bpy.ops.object.modifier_apply(modifier=backing.name)
+        # The sheared PVC edge is square. A smooth rim would pull the face
+        # normals sideways and give this flat strip a cylindrical reflection.
+        for face in strip.data.polygons:
+            if abs(face.normal.z) < .55:
+                face.use_smooth = False
 
     os.makedirs(os.path.dirname(OUT_BLEND), exist_ok=True)
     os.makedirs(os.path.dirname(OUT_GLB), exist_ok=True)

@@ -157,9 +157,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
         bumpMap: stripsData[idx].bumpTex,
         bumpScale: 0.009,
         metalness: 0.0,
-        roughness: 0.32,
-        clearcoat: 0.42,
-        clearcoatRoughness: 0.24,
+        roughness: 0.43,
+        roughnessMap: anodizedTex,
+        clearcoat: 0.19,
+        clearcoatRoughness: 0.31,
       });
       obj.castShadow = false;
     }
