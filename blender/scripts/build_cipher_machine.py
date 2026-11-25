@@ -230,6 +230,43 @@ def add_uv_plane(name, width, depth, location, mat, parent=None, curl=False):
     return obj
 
 
+def stamped_type(name, label, point, size, mat):
+    font = bpy.data.curves.new(name,"FONT")
+    font.body = label
+    font.align_x = 'CENTER'
+    font.align_y = 'CENTER'
+    font.size = size
+    obj = bpy.data.objects.new(name,font)
+    bpy.context.collection.objects.link(obj)
+    obj.location = point
+    font.materials.append(mat)
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.convert(target='MESH')
+
+
+def dial_window(x, y, brass):
+    # Mill a circular opening through each section of the index plate.
+    count = 64
+    verts, faces = [], []
+    for radius, z in [(0,1.067),(.299,1.067),(.284,1.052),(.284,1.010)]:
+        for i in range(count):
+            angle = math.pi*2*i/count
+            dx,dy = math.cos(angle),math.sin(angle)
+            r = radius or min(.449/max(abs(dx),.0001), .423/max(abs(dy),.0001))
+            verts.append((x+r*dx,y+r*dy,z))
+    for ring in range(3):
+        for i in range(count):
+            a, b = ring*count+i, ring*count+(i+1)%count
+            faces.append((a,b,b+count,a+count))
+    mesh=bpy.data.meshes.new("Milled opening")
+    mesh.from_pydata(verts,[],faces)
+    obj=bpy.data.objects.new("Rotor window",mesh)
+    bpy.context.collection.objects.link(obj)
+    mesh.materials.append(brass)
+
+
 def build():
     clear_scene()
 
@@ -237,7 +274,7 @@ def build():
     mat_deck = make_material("CipherDeck", (0.030, 0.032, 0.036), metallic=0.16, roughness=0.62)
     mat_seam = make_material("CipherSeam", (0.012, 0.013, 0.015), metallic=0.06, roughness=0.88)
     mat_steel = make_material("CipherSteel", (0.76, 0.78, 0.80), metallic=0.95, roughness=0.24)
-    mat_brass = make_material("CipherBrass", (0.76, 0.62, 0.34), metallic=0.92, roughness=0.28)
+    mat_brass = make_material("CipherBrass", (.47, .296, .115), metallic=0.92, roughness=0.28)
     mat_knob = make_material("CipherKnob", (0.11, 0.075, 0.055), metallic=0.05, roughness=0.38)
     mat_faceplate = make_material("CipherFaceplate", (0.08, 0.082, 0.088), metallic=0.2, roughness=0.45)
     mat_paper = make_material("CipherPaper", (0.91, 0.88, 0.81), metallic=0.0, roughness=0.88)
@@ -284,8 +321,8 @@ def build():
     # 2. Three milled rotor bays & knurled steel/brass rotors (M, C, P)
     rotor_xs = (-0.90, 0.0, 0.90)
     rotor_names = ("RotorM", "RotorC", "RotorP")
-    rotor_y = body_y + 0.06
-    rotor_z = 0.87
+    rotor_y = body_y + .38
+    rotor_z = .706
 
     for rx, rname in zip(rotor_xs, rotor_names):
         # Dark flat slot recess painted flush with top deck (underneath rotor protrusion)
@@ -297,32 +334,39 @@ def build():
             segments=1,
             mat=mat_seam,
         )
-        # Machined brass bezel frame bordering each rotor bay
-        add_beveled_box(
-            f"{rname}_BezelTop",
-            (0.72, 0.045, 0.032),
-            (rx + 0.05, rotor_y + 0.48, 1.006),
-            bevel_width=0.007,
-            segments=2,
-            mat=mat_brass,
-        )
-        add_beveled_box(
-            f"{rname}_BezelBot",
-            (0.72, 0.045, 0.032),
-            (rx + 0.05, rotor_y - 0.48, 1.006),
-            bevel_width=0.007,
-            segments=2,
-            mat=mat_brass,
-        )
+        dial_window(rx+.04,rotor_y,mat_brass)
         add_knurled_rotor(
             rname,
             radius=0.41,
             width=0.18,
             teeth=34,
-            location=(rx - 0.12, rotor_y, rotor_z),
+            location=(rx - .22, rotor_y, rotor_z),
             mat_rim=mat_steel,
             mat_brass=mat_brass,
         )
+
+    ivory = make_material("Engraving ivory",(.73,.65,.48),roughness=.62)
+    enamel = make_material("Vitreous enamel",(.012,.013,.012),roughness=.23)
+    for row, label in enumerate(["QWERTZUIO","ASDFGHJK","PYXCVBNM"]):
+        for col, letter in enumerate(label):
+            x = (col-(len(label)-1)/2)*.295
+            y = body_y - .18 - .232*row
+            name = "Key " + letter
+            add_cylinder(name+" stem", .052,.12,24,(x,y,1.046),mat=mat_steel)
+            add_cylinder(name+" bezel",.111,.052,40,(x,y,1.111),bevel_end=.008,mat=mat_brass)
+            add_cylinder(name+" cap",.095,.021,40,(x,y,1.135),bevel_end=.006,mat=enamel)
+            stamped_type(name+" print",letter,(x,y,1.148),.123,ivory)
+    for sx in (-1,1):
+        for sy in (-1,1):
+            x,y = 1.68*sx, body_y+1.08*sy
+            add_beveled_box("Brass corner",(.18,.18,.11),(x,y,.924),.016,4,mat_brass)
+            add_cylinder("Corner screw",.031,.013,32,(x,y,.983),mat=mat_steel)
+            add_beveled_box("Drive slot",(.041,.008,.004),(x,y,.990),.002,2,enamel,
+                            rot_euler=(0,0,sx*.42))
+    add_beveled_box("Maker plate",(1.38,.16,.019),(0,body_y-.886,1.02),.008,3,mat_brass)
+    stamped_type("Maker engraving","MODEL CIPHER PROTOCOL",(0,body_y-.886,1.032),.094,enamel)
+    for x,letter in zip(rotor_xs,"MCP"):
+        stamped_type("Index "+letter,letter,(x+.04,rotor_y+.349,1.072),.12,enamel)
 
     # 3. Brass side crank assembly on +X face
     crank_root = bpy.data.objects.new("CrankAssembly", None)

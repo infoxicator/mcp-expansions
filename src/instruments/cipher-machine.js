@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { studio, createStudioScene, createContactShadow } from '../core/studio.js';
 import { sound } from '../core/audio.js';
 
-export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
+export async function createInstrument({ container, canvas, phraseStore, theme, startSettled = false, onReady }) {
   const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'cipher-machine');
 
   // Elevated 3/4 studio macro angle framing the charcoal cipher box, knurled M·C·P rotors, brass crank, and foreground paper tape
@@ -13,6 +13,11 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
   const root = await studio.loadGLB('./assets/models/cipher-machine.glb');
   scene.add(root);
+
+  const caption = document.createElement('span');
+  caption.className = 'instrument-fineprint';
+  caption.textContent = 'turn the rotors';
+  container.appendChild(caption);
 
   const anodizedTex = studio.getAnodizedTexture();
 
@@ -28,31 +33,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   fctx.lineWidth = 2;
   fctx.strokeRect(20, 20, 984, 582);
 
-  // Quiet industrial legend along bottom edge of top deck
-  fctx.fillStyle = 'rgba(228, 220, 202, 0.78)';
-  fctx.font = '500 23px "JetBrains Mono", ui-monospace, monospace';
-  fctx.textAlign = 'center';
-  fctx.textBaseline = 'middle';
-  fctx.fillText('M O D E L   C I P H E R   P R O T O C O L', 512, 560);
-
-  // M / C / P index plates above each rotor slot
-  const rotorU = [512 - 301, 512, 512 + 301];
   const letters = ['M', 'C', 'P'];
-  letters.forEach((ch, idx) => {
-    const cx = rotorU[idx] + 18;
-    // Small brass-tinted index triangle pointing down to rotor
-    fctx.fillStyle = 'rgba(224, 196, 134, 0.88)';
-    fctx.beginPath();
-    fctx.moveTo(cx, 82);
-    fctx.lineTo(cx - 10, 64);
-    fctx.lineTo(cx + 10, 64);
-    fctx.closePath();
-    fctx.fill();
-
-    fctx.fillStyle = 'rgba(240, 234, 220, 0.92)';
-    fctx.font = '600 34px "JetBrains Mono", ui-monospace, monospace';
-    fctx.fillText(ch, cx, 42);
-  });
 
   const faceTex = new THREE.CanvasTexture(faceCanvas);
   faceTex.flipY = false;
@@ -209,19 +190,19 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   // along the axle so adjacent letters disappear naturally into the slot.
   const ringTextures = rotors.map((rotor, index) => {
     const strip = document.createElement('canvas');
-    strip.width = 160;
-    strip.height = 26 * 72;
+    strip.width = 240;
+    strip.height = 8 * 180;
     const ink = strip.getContext('2d');
     ink.fillStyle = '#d2bb89';
     ink.fillRect(0, 0, strip.width, strip.height);
-    ink.font = '600 55px Georgia, serif';
+    ink.font = '600 146px Georgia, serif';
     ink.textAlign = 'center';
     ink.textBaseline = 'middle';
-    for (let row = 0; row < 26; row++) {
+    for (let row = 0; row < 8; row++) {
       ink.fillStyle = '#383529';
-      ink.fillText(String.fromCharCode(65 + (row + [12, 3, 18][index]) % 26), 80, 72*row + 37);
+      ink.fillText(String.fromCharCode(65 + (row + [12, 2, 15][index]) % 26), 120, 180*row + 90);
       ink.fillStyle = '#827459';
-      ink.fillRect(16, 72*row, 128, 2);
+      ink.fillRect(14, 180*row, 212, 2);
     }
     const texture = new THREE.CanvasTexture(strip);
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -229,9 +210,9 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     const positions = [], uv = [], triangles = [];
     for (let n = 0; n <= 104; n++) {
       const angle = n * 2*Math.PI / 104;
-      for (const x of [.115, .307]) {
+      for (const x of [.10, .52]) {
         positions.push(x, .3585*Math.cos(angle), .3585*Math.sin(angle));
-        uv.push(x === .115 ? 0 : 1, 1 - n/104);
+        uv.push(x === .10 ? 0 : 1, 1 - n/104);
       }
       if (n < 104) {
         const k = 2*n;
@@ -255,8 +236,8 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   let isAnimating = false;
   let crankAngle = 0;
   let crankTarget = 0;
-  let rotorAngles = [0.25, 0.65, 1.1];
-  let rotorTargets = [0.25, 0.65, 1.1];
+  let rotorAngles = [0, 0, 0];
+  let rotorTargets = [0, 0, 0];
   let lastDetentTick = -1;
   let tapeAdvance = 1.0; // 0..1 feed slide
   let tapeDirty = true;
@@ -341,9 +322,9 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     revealCount = 0;
     tapeAdvance = 0.0;
     crankTarget += Math.PI * 2;
-    rotorTargets[0] += Math.PI * 1.15;
-    rotorTargets[1] += Math.PI * 1.55;
-    rotorTargets[2] += Math.PI * 1.95;
+    rotorTargets[0] += Math.PI * 2;
+    rotorTargets[1] += Math.PI * 4;
+    rotorTargets[2] += Math.PI * 6;
     tapeDirty = true;
   }
 
@@ -488,6 +469,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     },
 
     dispose() {
+      caption.remove();
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', onPointerUp);
