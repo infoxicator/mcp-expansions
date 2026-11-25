@@ -317,6 +317,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       drawTumblers();
     },
 
+    readLegend() {
+      return isUnlocked && animPhase === 'idle' ? currentState.text : '';
+    },
+
     isMoving() {
       return Boolean(animPhase !== 'idle' || Math.abs(shackleOffset - (isUnlocked ? UNLOCKED_SHACKLE_X : 0)) > .0005);
     },

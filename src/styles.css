@@ -255,6 +255,21 @@ body {
   height: 100%;
 }
 
+.small-print-transcript { display: none; }
+
+@media (max-width: 540px), (max-height: 460px) {
+  .small-print-transcript {
+    display: block;
+    position: absolute;
+    inset: auto 7% 8%;
+    color: var(--ink);
+    font: 400 clamp(17px, 5.3vmin, 26px)/1.15 var(--serif);
+    text-align: center;
+    overflow-wrap: anywhere;
+    pointer-events: none;
+  }
+}
+
 .poster-loading {
   position: absolute;
   inset: 0;

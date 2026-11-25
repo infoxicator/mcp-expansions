@@ -241,6 +241,23 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
   let currentState = phraseStore.getState();
 
+  // Pigment transfer on extruded rubber leaves tiny unprinted pores.
+  const inkTile = document.createElement('canvas');
+  inkTile.width = 67;
+  inkTile.height = 43;
+  const ink = inkTile.getContext('2d');
+  ink.fillStyle = '#e8e6d9';
+  ink.fillRect(0, 0, inkTile.width, inkTile.height);
+  let grainSeed = 83;
+  for (let n = 0; n < 220; n++) {
+    grainSeed = (grainSeed * 16807) % 2147483647;
+    const x = grainSeed % inkTile.width;
+    grainSeed = (grainSeed * 16807) % 2147483647;
+    ink.fillStyle = n % 4 ? '#bdbbb0' : '#504f49';
+    ink.fillRect(x, grainSeed % inkTile.height, 1, 1);
+  }
+  const jacketInk = lctx.createPattern(inkTile, 'repeat');
+
   function drawJacketLegend() {
     const ctx = lctx;
     const w = legendCanvas.width;
@@ -289,7 +306,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     ctx.save();
     ctx.translate(w * 0.5, cy + 16);
     ctx.scale(1.32, 1.0);
-    ctx.fillStyle = '#F4F1EA';
+    ctx.fillStyle = jacketInk;
     ctx.font = `600 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
     ctx.fillText(phraseText, 0, 0);
     ctx.restore();
@@ -462,6 +479,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       tensionVel = 0;
       updateCableGeometry(tension);
       lastGeoTension = tension;
+    },
+
+    readLegend() {
+      return tension > .98 && cyclePhase === 'idle' ? currentState.text : '';
     },
 
     isMoving() {

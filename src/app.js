@@ -292,10 +292,16 @@ class FeedApp {
       if (this.theme !== mountTheme) api.setTheme(this.theme);
       if (this.phraseStore.getState().text !== mountPhrase) api.setPhrase(this.phraseStore.getState());
       slot.api = api;
+      if (api.readLegend) {
+        slot.legend = document.createElement('span');
+        slot.legend.className = 'small-print-transcript';
+        host.appendChild(slot.legend);
+      }
       slot.state = 'ready';
       slideObj.frame.classList.add('is-ready');
       // Render initial frame immediately so neighbor slides look sharp before scrolling into view
       api.render(0);
+      if (slot.legend) slot.legend.textContent = api.readLegend();
     } catch (err) {
       if (this.instances.get(idx) !== slot) return;
       console.error(`Instrument ${entry.id} failed to load:`, err);
@@ -388,6 +394,10 @@ class FeedApp {
           slot.dirty = false;
           this.sizeCanvasForSlide(slot.slideObj);
           slot.api.render(dt);
+          if (slot.legend) {
+            const words = slot.api.readLegend();
+            if (slot.legend.textContent !== words) slot.legend.textContent = words;
+          }
         }
       }
     }
