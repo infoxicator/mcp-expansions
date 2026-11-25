@@ -218,19 +218,47 @@ def build():
         s_root.location = Vector((1.06, sy, 0.0))
         bpy.context.collection.objects.link(s_root)
 
-        # Glossy thick adhesive PVC strip body (0.075 thick) with chamfered edges
-        add_beveled_box(
-            f"StripVinylBody{idx}",
-            (3.16, 0.60, 0.075),
-            (0.0, 0.0, 0.042),
-            bevel_width=0.018,
-            segments=3,
-            mat=mat_vinyl_base,
-            parent=s_root,
-        )
-        # Top embossed face UV plane
-        mat_strip = make_material(f"DymoStripFace{idx}", (0.02, 0.022, 0.025), metallic=0.0, roughness=0.18)
-        add_uv_plane(f"StripFace{idx}", 3.12, 0.56, (0.0, 0.0, 0.082), mat_strip, parent=s_root)
+        # A strip cut off a spool retains a little of its winding radius.
+        # Model the curl continuously so the softbox reflection follows the vinyl.
+        root_angle = [-.011, .018, -.028][idx]
+        s_root.rotation_euler.z = root_angle
+        sections = 36
+        verts, faces = [], []
+        for j in range(sections+1):
+            u = j / sections
+            for k in range(3):
+                v = k/2
+                cut = .023 * v * (1 if idx == 1 else -1)
+                x = 3.16 * (u-.5) + cut * u**8
+                y = (v-.5)*.59
+                lift = [.11,.05,.16][idx] * u**5 + .040*(1-u)**6
+                z = .029 + lift + .014*(2*v-1)**2 + .021*u**4*(v-.5)
+                verts.append((x,y,z))
+        for j in range(sections):
+            for k in range(2):
+                a = j*3+k
+                faces.append((a,a+3,a+4,a+1))
+        mesh = bpy.data.meshes.new("Cut tape")
+        mesh.from_pydata(verts,[],faces)
+        mesh.update()
+        uv = mesh.uv_layers.new(name="UVMap")
+        for loop in mesh.loops:
+            j,k = divmod(loop.vertex_index,3)
+            uv.data[loop.index].uv = (j/sections, k/2)
+        strip = bpy.data.objects.new(f"StripFace{idx}",mesh)
+        bpy.context.collection.objects.link(strip)
+        strip.parent = s_root
+        ink = make_material(f"DymoStripFace{idx}", (.018,.02,.022), roughness=.28)
+        mesh.materials.append(ink)
+        mesh.materials.append(mat_vinyl_base)
+        for face in mesh.polygons:
+            face.use_smooth = True
+        backing = strip.modifiers.new("Adhesive backing","SOLIDIFY")
+        backing.thickness = .012
+        backing.material_offset = 1
+        backing.material_offset_rim = 1
+        bpy.context.view_layer.objects.active = strip
+        bpy.ops.object.modifier_apply(modifier=backing.name)
 
     os.makedirs(os.path.dirname(OUT_BLEND), exist_ok=True)
     os.makedirs(os.path.dirname(OUT_GLB), exist_ok=True)

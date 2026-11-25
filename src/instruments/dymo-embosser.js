@@ -155,7 +155,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       obj.material = new THREE.MeshPhysicalMaterial({
         map: stripsData[idx].tex,
         bumpMap: stripsData[idx].bumpTex,
-        bumpScale: 0.022,
+        bumpScale: 0.009,
         metalness: 0.0,
         roughness: 0.32,
         clearcoat: 0.42,
@@ -177,15 +177,15 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
   function drawEmbossedStrips() {
     const words = currentState.cleanWords.map((w) => w.replace(/,$/, '').toUpperCase());
-    const letters = ['M', 'C', 'P'];
+
 
     // Calibrated optical font size across all 3 Dymo strips
     const testCtx = stripsData[0].ctx;
-    let fontSize = 96;
+    let fontSize = 104;
     while (fontSize > 44) {
-      testCtx.font = `700 ${fontSize}px "Courier New", monospace`;
+      testCtx.font = `700 ${fontSize}px "JetBrains Mono", monospace`;
       const widest = Math.max(...words.map((txt) => testCtx.measureText(txt).width));
-      if (widest <= 740) break;
+      if (widest <= 908) break;
       fontSize -= 3;
     }
 
@@ -240,21 +240,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
         bctx.restore();
       };
 
-      // Left embossed channel notch (M / C / P) with clean vinyl margin past the cut gate
-      drawRaised(letters[idx], 102, h * 0.52, '700 54px "JetBrains Mono", ui-monospace, monospace', 'center');
-      ctx.fillStyle = 'rgba(242, 243, 245, 0.35)';
-      ctx.fillRect(150, 44, 4, h - 88);
-      bctx.fillStyle = '#C8C8C8';
-      bctx.fillRect(150, 44, 4, h - 88);
-
-      // Bold embossed word across the glossy strip
-      drawRaised(word, 184, h * 0.52, `700 ${fontSize}px "Courier New", monospace`, 'left');
-
-      // Right-end subtle Dymo tear-tab alignment dot
-      ctx.fillStyle = 'rgba(242, 243, 245, 0.28)';
-      ctx.beginPath();
-      ctx.arc(w - 38, h * 0.5, 6, 0, Math.PI * 2);
-      ctx.fill();
+      drawRaised(word, 60, h * 0.52, `700 ${fontSize}px "JetBrains Mono", monospace`);
 
       tex.needsUpdate = true;
       bumpTex.needsUpdate = true;
