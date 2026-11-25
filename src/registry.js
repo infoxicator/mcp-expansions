@@ -78,6 +78,13 @@ export const INSTRUMENTS = [
     cue: 'Spin tumblers or press Space',
     modulePath: './instruments/combination-lock.js',
   },
+  {
+    id: 'mechanical-typewriter',
+    number: '12',
+    title: 'Mechanical Typewriter',
+    cue: 'Strike keys or press Space',
+    modulePath: './instruments/mechanical-typewriter.js',
+  },
 ];
 
 export function findInstrumentIndex(id) {

@@ -144,6 +144,22 @@ function svgDiagramFor(instrumentId) {
           <text x="146" y="64" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">C</text>
           <text x="196" y="64" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">P</text>
         </svg>`;
+    case 'mechanical-typewriter':
+      return `
+        <svg class="fallback-diagram" viewBox="0 0 320 140" fill="none" stroke="currentColor" aria-hidden="true">
+          <rect x="92" y="12" width="136" height="58" rx="2" stroke-width="1.4"/>
+          <line x1="108" y1="28" x2="212" y2="28" stroke-width="1" opacity="0.45"/>
+          <line x1="108" y1="42" x2="196" y2="42" stroke-width="1" opacity="0.45"/>
+          <line x1="108" y1="56" x2="184" y2="56" stroke-width="1" opacity="0.45"/>
+          <rect x="64" y="66" width="192" height="14" rx="5" stroke-width="1.6"/>
+          <rect x="52" y="76" width="216" height="50" rx="8" stroke-width="1.5" opacity="0.7"/>
+          <circle cx="122" cy="108" r="11" stroke-width="1.3"/>
+          <circle cx="160" cy="108" r="11" stroke-width="1.3"/>
+          <circle cx="198" cy="108" r="11" stroke-width="1.3"/>
+          <text x="122" y="112" text-anchor="middle" font-size="10" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">M</text>
+          <text x="160" y="112" text-anchor="middle" font-size="10" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">C</text>
+          <text x="198" y="112" text-anchor="middle" font-size="10" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">P</text>
+        </svg>`;
     default:
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 100" fill="none" stroke="currentColor" aria-hidden="true">
