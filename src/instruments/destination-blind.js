@@ -307,13 +307,13 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     clatterToWords(nextWords);
   }
 
-  function onPointerDown(e) {
+  function onClick(e) {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     rollNewDestination();
   }
 
   canvas.style.cursor = 'pointer';
-  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('click', onClick);
 
   // Initialize settled words
   const initWords = phraseStore.getState().cleanWords;
@@ -375,6 +375,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       }
     },
 
+    isMoving() {
+      return Boolean(rows.some(row => row.flipping));
+    },
+
     render(dt) {
       stepAnimation(Math.min(dt, 0.05));
       studio.renderToCanvas(scene, camera, canvas, currentTheme);
@@ -386,7 +390,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     },
 
     dispose() {
-      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('click', onClick);
       bezelTex.dispose();
       flapGeo.dispose();
       rows.forEach((row) => {

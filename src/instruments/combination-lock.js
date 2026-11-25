@@ -215,13 +215,13 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     }
   }
 
-  function onPointerDown(e) {
+  function onClick(e) {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     triggerDial();
   }
 
   canvas.style.cursor = 'pointer';
-  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('click', onClick);
 
   let currentTheme = theme;
 
@@ -317,6 +317,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       drawTumblers();
     },
 
+    isMoving() {
+      return Boolean(animPhase !== 'idle' || Math.abs(shackleOffset - (isUnlocked ? UNLOCKED_SHACKLE_X : 0)) > .0005);
+    },
+
     render(dt) {
       stepAnimation(Math.min(dt, 0.05));
       studio.renderToCanvas(scene, camera, canvas, currentTheme);
@@ -328,7 +332,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     },
 
     dispose() {
-      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('click', onClick);
       drumTextures.forEach((d) => d.tex.dispose());
       scene.userData.plates.light.dispose();
       scene.userData.plates.dark.dispose();

@@ -322,6 +322,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     isDragging = false;
     canvas.releasePointerCapture?.(e.pointerId);
     canvas.style.cursor = 'grab';
+    if (e.type === 'pointercancel') return;
     if (!dragMoved) {
       triggerDiscoveryCycle();
     } else if (cableX < UNSEATED_X * 0.45 && !isSeated) {
@@ -418,6 +419,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       vconnOn = isSeated;
       revealedNodes = [isSeated, isSeated, isSeated];
       dirtyNodes = [true, true, true];
+    },
+
+    isMoving() {
+      return Boolean(seqPhase !== 'idle' || isDragging || dirtyNodes.some(Boolean) || cableX !== (isSeated ? 0 : UNSEATED_X));
     },
 
     render(dt) {

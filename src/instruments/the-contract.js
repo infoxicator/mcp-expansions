@@ -130,9 +130,9 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     } else if (matName === 'CablePaleGreyOvermold' || matName === 'CablePaleGreyStrain' || matName === 'CablePaleGreyJacket') {
       const isStrain = matName === 'CablePaleGreyStrain';
       obj.material = new THREE.MeshPhysicalMaterial({
-        color: isStrain ? 0xaeadac : 0xb9b9b7,
+        color: isStrain ? 0xaeadac : 0xaaa9a5,
         metalness: 0.0,
-        roughness: isStrain ? 0.68 : 0.56,
+        roughness: isStrain ? 0.78 : 0.72,
         roughnessMap: cableTex,
         bumpMap: cableTex,
         bumpScale: 0.0014,
@@ -181,13 +181,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   let negotiationStart = 0;
   let lastStepIdx = -1;
   let currentWords = phraseStore.getState().cleanWords;
-  let currentIndexLabel = formatCatalog(phraseStore.getState());
   let oledDirty = true;
-
-  function formatCatalog(st) {
-    if (st.isRemix) return 'REMIX';
-    return `${String(st.index + 1).padStart(3, '0')}/${String(st.total).padStart(3, '0')}`;
-  }
 
   function drawPixelGrid(ctx, w, h) {
     ctx.save();
@@ -346,7 +340,6 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     }
     const st = phraseStore.getState();
     currentWords = st.cleanWords;
-    currentIndexLabel = formatCatalog(st);
     phase = 'negotiating';
     negotiationStart = performance.now();
     lastStepIdx = 0;
@@ -442,6 +435,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     isDragging = false;
     canvas.releasePointerCapture?.(e.pointerId);
     canvas.style.cursor = 'grab';
+    if (e.type === 'pointercancel') return;
 
     if (!dragMoved) {
       // Crisp single click toggles plug / unplug
@@ -520,7 +514,6 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   return {
     setPhrase(state, meta = {}) {
       currentWords = state.cleanWords;
-      currentIndexLabel = formatCatalog(state);
       if (meta.source === 'the-contract') return;
       if (isPlugged) {
         phase = 'locked';
@@ -550,6 +543,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       phase = isPlugged ? 'locked' : 'off';
       hasNegotiatedOnce = isPlugged;
       oledDirty = true;
+    },
+
+    isMoving() {
+      return Boolean(phase === 'negotiating' || isDragging || oledDirty || plugX !== (isPlugged ? 0 : UNPLUGGED_X));
     },
 
     render(dt) {

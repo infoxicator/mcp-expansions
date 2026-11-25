@@ -410,6 +410,7 @@ export async function createInstrument({ container, canvas, phraseStore, theme, 
     isDragging = false;
     canvas.releasePointerCapture?.(e.pointerId);
     canvas.style.cursor = 'grab';
+    if (e.type === 'pointercancel') return;
 
     const pulled = Math.abs(theta[0]);
     if (!dragMoved || pulled < 0.14) {
@@ -455,6 +456,10 @@ export async function createInstrument({ container, canvas, phraseStore, theme, 
       } else {
         startAutoPull(0.84, true);
       }
+    },
+
+    isMoving() {
+      return Boolean(autoPull || isDragging || revealActive || theta.some((v, i) => Math.abs(v) + Math.abs(omega[i]) > .0001));
     },
 
     render(dt) {

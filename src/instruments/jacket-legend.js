@@ -378,6 +378,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     isDragging = false;
     canvas.releasePointerCapture?.(e.pointerId);
     canvas.style.cursor = 'ew-resize';
+    if (e.type === 'pointercancel') return;
     if (!dragMoved) {
       triggerCoilAndPull();
     } else {
@@ -461,6 +462,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       tensionVel = 0;
       updateCableGeometry(tension);
       lastGeoTension = tension;
+    },
+
+    isMoving() {
+      return Boolean(cyclePhase !== 'idle' || isDragging || Math.abs(targetTension - tension) > .0002);
     },
 
     render(dt) {

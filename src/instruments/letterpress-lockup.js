@@ -306,13 +306,13 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     sound.playMechanicalDetent(0.92, 0.22);
   }
 
-  function onPointerDown(e) {
+  function onClick(e) {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     triggerLockup();
   }
 
   canvas.style.cursor = 'pointer';
-  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('click', onClick);
 
   let currentTheme = theme;
 
@@ -395,6 +395,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       drawAllArtwork();
     },
 
+    isMoving() {
+      return Boolean(animPhase !== 'idle');
+    },
+
     render(dt) {
       stepAnimation(Math.min(dt, 0.05));
       studio.renderToCanvas(scene, camera, canvas, currentTheme);
@@ -406,7 +410,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     },
 
     dispose() {
-      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('click', onClick);
       proofTex.dispose();
       woodTex.dispose();
       slugTextures.forEach((s) => s.tex.dispose());

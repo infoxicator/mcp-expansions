@@ -293,7 +293,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   const raycaster = new THREE.Raycaster();
   const pointerNdc = new THREE.Vector2();
 
-  function onPointerDown(e) {
+  function onClick(e) {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     const rect = canvas.getBoundingClientRect();
     pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -310,7 +310,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   }
 
   canvas.style.cursor = 'pointer';
-  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('click', onClick);
 
   let currentTheme = theme;
 
@@ -373,6 +373,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       readoutDirty = true;
     },
 
+    isMoving() {
+      return Boolean(readoutDirty || bayLifts.some((lift, i) => Math.abs(lift - Number(i === activeBay)) > .001));
+    },
+
     render(dt) {
       stepAnimation(Math.min(dt, 0.05));
       studio.renderToCanvas(scene, camera, canvas, currentTheme);
@@ -384,7 +388,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     },
 
     dispose() {
-      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('click', onClick);
       headerTex.dispose();
       readTex.dispose();
       scene.userData.plates.light.dispose();

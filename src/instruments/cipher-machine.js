@@ -305,13 +305,13 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
   // Interactive click or drag on canvas
   let pointerDown = false;
-  let dragStartY = 0;
+  let dragStartX = 0;
   let dragged = false;
 
   function onPointerDown(e) {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     pointerDown = true;
-    dragStartY = e.clientY;
+    dragStartX = e.clientX;
     dragged = false;
     canvas.style.cursor = 'grabbing';
   }
@@ -321,17 +321,17 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       canvas.style.cursor = 'pointer';
       return;
     }
-    if (Math.abs(e.clientY - dragStartY) > 22 && !dragged) {
+    if (Math.abs(e.clientX - dragStartX) > 22 && !dragged) {
       dragged = true;
       crankForNewPhrase({ advancePhrase: true });
     }
   }
 
-  function onPointerUp() {
+  function onPointerUp(e) {
     if (!pointerDown) return;
     pointerDown = false;
     canvas.style.cursor = 'pointer';
-    if (!dragged) {
+    if (!dragged && e.type !== 'pointercancel') {
       crankForNewPhrase({ advancePhrase: true });
     }
   }
@@ -427,6 +427,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       revealCount = 3;
       tapeAdvance = settled ? 1.0 : 1.0;
       tapeDirty = true;
+    },
+
+    isMoving() {
+      return Boolean(isAnimating || tapeDirty || Math.abs(crankTarget - crankAngle) > .0005);
     },
 
     render(dt) {

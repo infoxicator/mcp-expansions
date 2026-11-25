@@ -259,13 +259,13 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     plateDirty = true;
   }
 
-  function onPointerDown(e) {
+  function onClick(e) {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     triggerFlip();
   }
 
   canvas.style.cursor = 'pointer';
-  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('click', onClick);
 
   let currentTheme = theme;
   let swappedMidFlip = false;
@@ -365,6 +365,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       plateDirty = true;
     },
 
+    isMoving() {
+      return Boolean(flipState === 'flipping' || plateDirty || Math.abs((ccChannel === 1 ? 3.2 : 0) - ledCC1Mat.emissiveIntensity) > .01);
+    },
+
     render(dt) {
       stepAnimation(Math.min(dt, 0.05));
       studio.renderToCanvas(scene, camera, canvas, currentTheme);
@@ -376,7 +380,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     },
 
     dispose() {
-      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('click', onClick);
       plateTex.dispose();
       scene.userData.plates.light.dispose();
       scene.userData.plates.dark.dispose();

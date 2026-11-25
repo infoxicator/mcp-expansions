@@ -281,13 +281,13 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     drawPaper(0);
   }
 
-  function onPointerDown(e) {
+  function onClick(e) {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     triggerType();
   }
 
   canvas.style.cursor = 'pointer';
-  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('click', onClick);
 
   let currentTheme = theme;
 
@@ -391,6 +391,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       }
     },
 
+    isMoving() {
+      return Boolean(animPhase !== 'idle' || Math.abs(carriageTargetX - carriageX) > .0005 || typebarKick > 0);
+    },
+
     render(dt) {
       stepAnimation(Math.min(dt, 0.05));
       studio.renderToCanvas(scene, camera, canvas, currentTheme);
@@ -402,7 +406,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     },
 
     dispose() {
-      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('click', onClick);
       paperTex.dispose();
       keyTextures.forEach((t) => t.dispose());
       scene.userData.plates.light.dispose();

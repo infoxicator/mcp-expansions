@@ -67,8 +67,7 @@ class FeedApp {
     this.fallbackReason = getFallbackReason();
 
     await this.phraseStore.load();
-    const { explicitPhrase } = this.phraseStore.initFromUrl();
-    this.explicitPhraseOnLoad = explicitPhrase;
+    this.phraseStore.initFromUrl();
 
     this.initialInstrumentId = params.get('i');
     this.activeIndex = findInstrumentIndex(this.initialInstrumentId);
@@ -97,6 +96,7 @@ class FeedApp {
     // Subscribe to phrase changes
     this.phraseStore.subscribe((state, meta) => {
       for (const slot of this.instances.values()) {
+        slot.dirty = true;
         if (slot.api) slot.api.setPhrase(state, meta);
       }
       if (!meta.silentUrl) {
@@ -152,6 +152,7 @@ class FeedApp {
       } catch (_) {}
     }
     for (const slot of this.instances.values()) {
+      slot.dirty = true;
       if (slot.api) slot.api.setTheme(this.theme);
     }
   }
@@ -276,7 +277,6 @@ class FeedApp {
         phraseStore: this.phraseStore,
         theme: this.theme,
         startSettled,
-
       });
 
       if (this.instances.get(idx) !== slot) {
@@ -359,6 +359,7 @@ class FeedApp {
   triggerActiveInstrument(opts = {}) {
     const slot = this.instances.get(this.activeIndex);
     if (slot && slot.api && typeof slot.api.triggerPrimary === 'function') {
+      slot.dirty = true;
       slot.api.triggerPrimary(opts);
     }
   }
@@ -378,7 +379,8 @@ class FeedApp {
         const slideTop = idx * this.feedEl.clientHeight;
         const slideBottom = slideTop + this.feedEl.clientHeight;
         const visible = slideBottom > viewTop + 2 && slideTop < viewBottom - 2;
-        if (visible) {
+        if (visible && (slot.dirty || slot.api.isMoving?.())) {
+          slot.dirty = false;
           this.sizeCanvasForSlide(slot.slideObj);
           slot.api.render(dt);
         }
@@ -570,6 +572,7 @@ class FeedApp {
     window.addEventListener('resize', () => {
       for (const slot of this.instances.values()) {
         if (slot.state === 'ready') {
+          slot.dirty = true;
           this.sizeCanvasForSlide(slot.slideObj);
           slot.api?.resize?.();
         }
