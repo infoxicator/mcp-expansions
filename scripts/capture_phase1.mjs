@@ -1,3 +1,4 @@
+import { exportStrips } from './filmstrips.mjs';
 import { writeFrames } from './recording.mjs';
 import { swipeNext } from './swipe.mjs';
 import assert from 'node:assert/strict';
@@ -184,10 +185,13 @@ async function main() {
       everyNthFrame: 1,
     });
 
+    const clock=()=>(performance.now()-t0)/1000;
+    const poster=await recPage.locator('[data-poster-index="0"] canvas').boundingBox();
     // Hold briefly at rest on Newton Protocol (1.2s)
     await recPage.waitForTimeout(1200);
 
     // Pull & release M ball via Space -> clacks out "More", "Cake,", "Please" with P swinging out!
+    const pull=clock();
     await recPage.keyboard.press('Space');
     await recPage.waitForTimeout(4400);
 
@@ -195,12 +199,15 @@ async function main() {
     await swipeNext(recPage, cdp, 1);
     await recPage.waitForTimeout(1300);
 
+    const seat=clock();
     await recPage.mouse.click(795, 565);
     await recPage.waitForFunction(() => document.querySelector('[data-id="the-contract"] canvas')
       .getAttribute('aria-label') === 'The Contract · More Cake Please');
     await recPage.waitForTimeout(1900);
+    const unplug=clock();
     await recPage.mouse.click(795, 565);
     await recPage.waitForTimeout(1200);
+    const replug=clock();
     await recPage.mouse.click(820, 570);
     await recPage.waitForFunction(() => {
       const meter = document.querySelector('[data-id="the-contract"] canvas');
@@ -249,6 +256,25 @@ async function main() {
 
 
 
+    const samples=[];
+    const sample=(label,start,offsets)=>offsets.forEach(dt=>samples.push({label,time:start+dt}));
+    sample('Newton Protocol',pull,[-.2,.19,.52,.83,1.13,1.55,1.97,3.85]);
+    sample('The Contract',seat,[-.16,.11,.38,.62,.86,1.15,1.53]);
+    sample('Disconnect',unplug,[.36]);
+    sample('Reconnect',replug,[-.16,.11,.82,1.52]);
+    exportStrips(outMp4,tmpFramesDir,poster,samples,[0,1,3,6,7,8,9,11,13,14,15,19],'phase1');
+
+    // Detect separated acoustic impacts in the cradle-only portion of the film.
+    const pcm=execFileSync('ffmpeg',['-v','error','-ss',pull.toFixed(3),'-t','4.3','-i',outMp4,
+      '-vn','-ac','1','-ar','24000','-f','s16le','-']);
+    let attacks=0,lastLoud=-1000;
+    for(let i=0;i+480<pcm.length;i+=480){
+      let peak=0;
+      for(let j=0;j<480;j+=2) peak=Math.max(peak,Math.abs(pcm.readInt16LE(i+j)));
+      if(peak>240){if(i-lastLoud>480*8) attacks++;lastLoud=i;}
+    }
+    assert.ok(attacks>=3,'Fewer than three recorded cradle impacts: '+attacks);
+    console.log('Recorded cradle audio: '+attacks+' separated attacks');
     const durOut = execFileSync('ffprobe', [
       '-v', 'error',
       '-show_entries', 'format=duration',

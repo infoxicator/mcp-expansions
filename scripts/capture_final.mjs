@@ -1,3 +1,4 @@
+import { exportStrips, reviewJpeg, verifyMotion } from './filmstrips.mjs';
 import { writeFrames } from './recording.mjs';
 import { swipeNext } from './swipe.mjs';
 import assert from 'node:assert/strict';
@@ -98,6 +99,9 @@ async function main() {
       assert.equal(await page.evaluate(() => window.__MCP_FEED__.getPhrase().id), 'more-cake-please');
       await page.waitForTimeout(260);
       await page.screenshot({ path: outPath });
+      const reviewDir=path.join(FINAL_DIR,'review');
+      fs.mkdirSync(reviewDir,{recursive:true});
+      reviewJpeg(outPath,path.join(reviewDir,inst.number+'-'+inst.id+'.jpg'),540);
       stillPaths.push({ ...inst, file: `${inst.number}-${inst.id}.png`, outPath });
       console.log(`Captured still ${inst.number}/12: ${inst.id}`);
     }
@@ -249,6 +253,7 @@ async function main() {
     await sheetPage.waitForTimeout(150);
     const contactSheetPath = path.join(FINAL_DIR, 'contact-sheet.png');
     await sheetPage.screenshot({ path: contactSheetPath });
+    reviewJpeg(contactSheetPath,path.join(FINAL_DIR,'contact-sheet.jpg'),1440);
     console.log(`Saved contact sheet: ${contactSheetPath}`);
     await sheetCtx.close();
 
@@ -295,20 +300,32 @@ async function main() {
       everyNthFrame: 1,
     });
 
-    await recPage.waitForTimeout(1200);
-    for (let idx = 1; idx < INSTRUMENTS.length; idx++) {
-      await swipeNext(recPage, cdp, idx);
-      await waitReady(recPage, idx);
-      if (idx === 1) {
-        await recPage.mouse.click(794, 555);
-        await recPage.waitForFunction(() => document.querySelector('[data-id="the-contract"] canvas')
-          ?.getAttribute('aria-label') === 'The Contract · More Cake Please');
-      }
-      if (idx === 7) {
+    const segments=[];
+    const clock=()=>(performance.now()-t0)/1000;
+    for (let idx=0; idx<INSTRUMENTS.length; idx++) {
+      if (idx) await swipeNext(recPage,cdp,idx);
+      await waitReady(recPage,idx);
+      const frame=recPage.locator('[data-poster-index="'+idx+'"] canvas');
+      assert.equal(await recPage.locator('.fallback-plate').count(),0);
+      const poster=await frame.boundingBox();
+      await recPage.waitForTimeout(260);
+      const start=clock();
+      if (idx===1 || idx===6) {
+        // Seat the free plug / select the third (live) specimen by hand.
+        await frame.click({position:{x:poster.width*(idx===1?.88:.40),y:poster.height*(idx===1?.50:.63)}});
+      } else {
         await recPage.keyboard.press('Space');
-        await recPage.waitForFunction(() => !window.__MCP_FEED__.getInstance(7).isMoving());
       }
-      await recPage.waitForTimeout(1020);
+      if (idx===0) {
+        await recPage.waitForFunction(()=>document.querySelectorAll('.newton-word.is-revealed').length===0);
+        await recPage.waitForFunction(()=>document.querySelectorAll('.newton-word.is-revealed').length===3);
+      } else {
+        await recPage.waitForFunction(i=>window.__MCP_FEED__.getInstance(i).isMoving(),idx);
+        await recPage.waitForFunction(i=>!window.__MCP_FEED__.getInstance(i).isMoving(),idx);
+      }
+      const end=clock();
+      await recPage.waitForTimeout(320);
+      segments.push({start,end,poster});
     }
     const totalEndSec = (performance.now() - t0) / 1000;
     await cdp.send('Page.stopScreencast');
@@ -334,17 +351,26 @@ async function main() {
       outMp4,
     ], { stdio: 'inherit' });
 
-    // Extract a 4x3 filmstrip preview from the finished MP4 for quick visual inspection
-    const filmstripPath = path.join(ROOT, 'tmp', 'demo-filmstrip.png');
-    execFileSync('ffmpeg', [
-      '-y',
-      '-i', outMp4,
-      '-vf', 'fps=12/26,scale=360:360,tile=4x3',
-      '-frames:v', '1',
-      filmstripPath,
-    ], { stdio: 'pipe' });
-
-
+    // Measure moving hardware inside each stationary poster in the finished MP4.
+    const regions=[
+      [0,.12,1,.44],[.81,.43,.19,.15],[.30,.17,.41,.14],[.05,.76,.91,.19],
+      [0,.105,.083,.095],[.11,.24,.72,.45],[.07,.08,.85,.65],[.08,.06,.84,.88],
+      [.17,.09,.65,.27],[.20,.26,.43,.43],[.21,.40,.58,.46],[.43,.39,.14,.28]
+    ];
+    const samples=[];
+    const compact=[];
+    // Keep the measured edit points beside the raw frames for export retries.
+    fs.writeFileSync(path.join(tmpFramesDir,'segments.json'),JSON.stringify(segments));
+    // Sample both sides of the stroke, with a readable pre- and post-state.
+    for (const [i,{start,end,poster}] of segments.entries()) {
+      const duration=end-start;
+      const name=INSTRUMENTS[i].title;
+      verifyMotion(outMp4,start-.09,duration+.18,poster,regions[i],name);
+      const times=[start-.12,start+duration*(i===1?.075:.27),start+duration*(i===5?.50:.61),end+.14];
+      compact.push(samples.length+(i===5?2:1));
+      for(const time of times) samples.push({time,label:INSTRUMENTS[i].number+'  '+name});
+    }
+    exportStrips(outMp4,tmpFramesDir,segments[0].poster,samples,compact,'full-feed');
 
     const durOut = execFileSync('ffprobe', [
       '-v', 'error',

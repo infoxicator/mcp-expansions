@@ -10,6 +10,29 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
   const [plate, bearings] = await Promise.all([
     photograph(canvas, 'newton-protocol'), loadPhotograph('balls')
   ]);
+  // Build a relief pass from the photographed marks. Opposing rims catch the
+  // window light while the middle of the incision retains the steel grain.
+  const steel = document.createElement('canvas');
+  steel.width = bearings.width;
+  steel.height = bearings.height;
+  const metal = steel.getContext('2d');
+  metal.drawImage(bearings, 0, 0);
+  const relief = metal.getImageData(0, 0, steel.width, steel.height);
+  const original = relief.data.slice();
+  for (const left of [14, 433, 854]) {
+    for (let y = 163; y < 254; y++) {
+      for (let x = left + 133; x < left + 252; x++) {
+        const p = 4 * (y * steel.width + x);
+        const offset = 4 * (steel.width * 3 + 2);
+        const bevel = (original[p - offset] - original[p + offset]) * .92;
+        for (let c = 0; c < 3; c++) relief.data[p+c] = original[p+c] + bevel;
+      }
+    }
+  }
+  metal.putImageData(relief, 0, 0);
+  const exposure = document.createElement('canvas');
+  exposure.width = exposure.height = 200;
+  const shutter = exposure.getContext('2d');
   let posed = true;
   let currentTheme = theme;
   // Editorial serif word bar integrated inside the lower band of the square poster
@@ -138,12 +161,12 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
       const bailX = x - (radius+3)*Math.sin(angle);
       const bailY = y - (radius+3)*Math.cos(angle);
       ctx.save();
-      for (const side of [-1,1]) {
+      for (const side of (i === 0 ? [0] : [-1,1])) {
         ctx.beginPath();
         ctx.moveTo(pivotX + side*16, 109);
         ctx.lineTo(bailX, bailY);
         ctx.strokeStyle = currentTheme === 'dark' ? '#a7a399' : '#494640';
-        ctx.lineWidth = 1.45;
+        ctx.lineWidth = 1.35;
         ctx.stroke();
         ctx.fillStyle = '#8e8b80';
         ctx.fillRect(pivotX+side*16-3,106,6,5);
@@ -155,21 +178,29 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
       ctx.translate(x,y);
       ctx.rotate(-angle*.12);
       const sx = [14,433,854][i], sy = 14, side = 386;
-      const stamp = (dx,dy) => ctx.drawImage(bearings,sx,sy,side,side,
-        -radius+dx,-radius+dy,2*radius,2*radius);
+
       ctx.shadowColor = 'rgba(30,25,18,.34)';
       ctx.shadowBlur = 10 * canvas.width / 1000;
       ctx.shadowOffsetX = 5 * canvas.width / 1000;
       ctx.shadowOffsetY = 9 * canvas.width / 1000;
       const speed = posed && i === 0 ? 2.15 : omega[i];
       if (Math.abs(speed) > .25) {
-        for (let sample=6; sample>0; sample--) {
-          ctx.globalAlpha = .061;
-          stamp(-sample*speed*.95,sample*speed*Math.sin(angle)*.6);
+        // A short exposure trails along the tangent. Its sharp closing flash
+        // preserves the incision when the sphere crosses the window light.
+        shutter.clearRect(0, 0, 200, 200);
+        shutter.globalCompositeOperation = 'lighter';
+        shutter.globalAlpha = .62/12;
+        for (let sample=0; sample<12; sample++) {
+          const travel = (sample/11 - .5) * 372 * speed / 42;
+          shutter.drawImage(steel,sx,sy,side,side,100-radius+travel*Math.cos(angle),
+            100-radius-travel*Math.sin(angle),2*radius,2*radius);
         }
+        shutter.globalAlpha=.38;
+        shutter.drawImage(steel,sx,sy,side,side,100-radius,100-radius,2*radius,2*radius);
+        ctx.drawImage(exposure,-100,-100);
+      } else {
+        ctx.drawImage(steel,sx,sy,side,side,-radius,-radius,2*radius,2*radius);
       }
-      ctx.globalAlpha=1;
-      stamp(0,0);
       ctx.restore();
     }
   }

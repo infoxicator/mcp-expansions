@@ -33,7 +33,7 @@ Twelve interactive square posters for MCP’s second birthday. Each instrument p
 
 ## Architecture & Static Hosting
 
-The site is a set of static ES modules. The current poster and its immediate neighbours load on approach. At rest the feed retains the last rendered frame. A photo plate supplies the working surface and hardware of each instrument. The renderer registers moving parts, light emitters and live type in the same coordinate space. Newton uses engraved steel sprites on bifilar threads with a nonlinear pendulum and impulse solver.
+The site is a set of static ES modules. The current poster and its immediate neighbours load on approach. At rest the feed retains the last rendered frame. A photo plate supplies the working surface and hardware of each instrument. The renderer registers moving parts, light emitters and live type in the same coordinate space. Newton suspends the M sphere on a single wire and integrates the photographed steel along the pendulum’s path for shutter blur. Its impulse solver drives the word reveals and audible impacts.
 
 The photographic plates in `assets/photographs/` were made with ImageGen. The Blender sources, compressed meshes, lighting probes and previous render plates are retained in `blender/` and `assets/`. The locally served fonts and their OFL licences are in `assets/fonts/`.
 
@@ -45,7 +45,7 @@ python3 -m http.server 8000 --bind 127.0.0.1
 
 ### Browser verification
 
-Run `npm test` to start a temporary loopback server and exercise the live mechanisms, snap navigation, phrase links and motion preference. The two capture scripts start their own loopback server. They use the project’s Playwright dependency, local Chrome and FFmpeg.
+Run `npm test` to start a temporary loopback server and exercise the live mechanisms, snap navigation, phrase links and motion preference. The two capture scripts start their own loopback server. They use the project’s Playwright dependency, local Chrome, FFmpeg and ImageMagick.
 
 ```sh
 node scripts/capture_phase1.mjs
@@ -59,7 +59,8 @@ node scripts/capture_final.mjs
 
 - `proof/final/contact-sheet.png` — 4×3 contact sheet of 1080×1080 stills for all 12 instruments at rest on `"More Cake, Please"`
 - `proof/final/stills/` — individual 1080×1080 browser captures (`01-newton-protocol.png` … `12-mechanical-typewriter.png`)
-- `proof/final/full-feed-demo.mp4` — full-feed swipe recording scrolling through all 12 instruments and operating hardware live
+- `proof/final/full-feed-demo.mp4` — all twelve instruments operated in sequence. The capture checks multiple pixel transitions in each instrument’s hardware region in the encoded film.
+- `proof/final/review/` contains the 540px still JPEGs. Each movie has a matching `*-filmstrip.jpg` and `*-frames-540.jpg`, sampled from its recorded timeline.
 
 ## Contributing a Phrase
 

@@ -86,6 +86,37 @@ export async function createInstrument({canvas, phraseStore, startSettled}) {
   listen('pointerup',release);
   listen('pointercancel',release);
 
+  function housing(right, travel) {
+    ctx.save();
+    if (!right) { ctx.translate(1000,0); ctx.scale(-1,1); }
+    ctx.translate(travel,0);
+    // The metal ferrule remains between the capsule and its removable plug.
+    const rim=ctx.createLinearGradient(0,443,0,555);
+    for (const [stop,color] of [[0,'#373633'],[.12,'#d2cbc0'],[.27,'#88857f'],
+      [.51,'#4d4c49'],[.82,'#36332f'],[.96,'#a09a8b'],[1,'#393632']])
+      rim.addColorStop(stop,color);
+    ctx.fillStyle=rim;
+    ctx.beginPath();ctx.roundRect(818,445,13,107,4);ctx.fill();
+    ctx.shadowColor='rgba(39,30,22,.53)';ctx.shadowBlur=5;ctx.shadowOffsetY=8;
+    ctx.fillStyle='#242422';
+    ctx.beginPath();ctx.roundRect(827,448,70,99,9);ctx.fill();
+    ctx.shadowColor='transparent';
+    ctx.clip();
+    crop(845,465,39,64,827,448,70,99);
+    const mould=ctx.createLinearGradient(0,448,0,547);
+    mould.addColorStop(0,'rgba(235,228,212,.4)');
+    mould.addColorStop(.09,'rgba(221,222,214,.12)');
+    mould.addColorStop(.55,'rgba(44,42,37,.02)');
+    mould.addColorStop(.93,'rgba(3,4,5,.47)');
+    mould.addColorStop(1,'rgba(167,156,143,.20)');
+    ctx.fillStyle=mould;ctx.fillRect(827,448,70,99);
+    for (const x of [875,881,887]) {
+      ctx.fillStyle='rgba(9,9,8,.42)';ctx.fillRect(x,455,2,85);
+      ctx.fillStyle='rgba(208,201,184,.14)';ctx.fillRect(x+2,455,1.4,85);
+    }
+    ctx.restore();
+  }
+
   function draw(dt) {
     if (!drag || drag.snapped) {
       const goal = seated ? 0 : 120;
@@ -121,6 +152,8 @@ export async function createInstrument({canvas, phraseStore, startSettled}) {
       crop(817,430,183,135,817+offset,430);
       ctx.restore();
     }
+    housing(false,0);
+    housing(true,offset);
     const elapsed = started === null ? 0 : performance.now()-started;
     const index = until.findIndex(end=>elapsed<end);
     if (started !== null && index<0) started=null;

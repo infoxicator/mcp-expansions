@@ -94,7 +94,7 @@ try {
     const current = await phrase();
     await page.keyboard.press('Space');
     if (idx === 6) {
-      await page.waitForTimeout(550);
+      await page.waitForFunction(() => !window.__MCP_FEED__.getInstance(6).isMoving());
       assert.equal(await phrase(), current);
       assert.equal(await page.locator('[data-id="specimen-drawer"] canvas').getAttribute('aria-label'), 'Charge-only cable');
       await page.keyboard.press('Space');
