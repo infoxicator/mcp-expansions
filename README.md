@@ -1,15 +1,15 @@
 # MCP Expansions — Twelve Physical Instruments
 
-A quiet vertical snap-scrolling feed of **12 photorealistic physical instruments** celebrating **MCP's 2nd Birthday** (Nov 25, 2024 — Nov 25, 2026), pairing studio product photography lighting and custom Blender-modeled Draco GLB hardware with 64 hand-crafted **M · C · P** phrases.
+Twelve interactive square posters for MCP’s second birthday. Each instrument performs one of the 85 phrases in `phrases.json`. Scroll to the next poster or share a phrase and instrument together.
 
 ## The Twelve Instruments
 
 | # | ID | Instrument | Interaction |
 |---|---|---|---|
-| 01 | `newton-protocol` | **Newton Protocol** | Drag the `M` sphere or press `Space` to clack out a new M · C · P phrase |
+| 01 | `newton-protocol` | **Newton Protocol** | Tap the `M` sphere to replay, pull harder for a new phrase, or use `Space` |
 | 02 | `the-contract` | **The Contract** | Plug in the USB-C cable (`5V → 9V → 15V → 20V`) to negotiate and lock a phrase |
 | 03 | `cipher-machine` | **Cipher Machine** | Turn the brass hand crank or press `Space` to stamp a fresh paper tape |
-| 04 | `jacket-legend` | **Jacket Legend** | Pull the braided USB-C cable taut to read the silk-screened `AWM 2725` legend |
+| 04 | `jacket-legend` | **Jacket Legend** | Pull the USB-C jacket taut to read its printed `AWM 2725` legend |
 | 05 | `discover-identity` | **Discover Identity** | Seat the VCONN cable to wake the `SOP / SOP' / SOP''` e-marker chips |
 | 06 | `flip-contract` | **Flip Contract** | Flip the USB-C plug 180° (`CC1` ↔ `CC2`) to negotiate a new orientation contract |
 | 07 | `specimen-drawer` | **Specimen Drawer** | Pick any of the 5 coiled specimen cables in the anodized studio tray |
@@ -23,7 +23,7 @@ A quiet vertical snap-scrolling feed of **12 photorealistic physical instruments
 
 - **Navigate feed**: Mouse wheel, trackpad swipe, touch swipe, `↑` / `↓`, or `j` / `k`
 - **Operate instrument**: Direct click/drag on the hardware or `Space`
-- **Index drawer**: `/` to search and filter all 64 entries in `phrases.json` (`Birthday`, `Protocol`, `Dev`, `Absurd`)
+- **Index drawer**: `/` to search and filter all 85 entries in `phrases.json` (`Birthday`, `Protocol`, `Dev`, `Absurd`, `Skeptic`)
 - **Theme**: `T` toggles light and dark studio sweeps
 - **Deep links**:
   - `?i=<instrument-id>` — jump directly to any instrument (e.g. `?i=combination-lock`)
@@ -37,13 +37,38 @@ A quiet vertical snap-scrolling feed of **12 photorealistic physical instruments
 - **Lazy-loaded hardware** — a single shared WebGL2 renderer mounts only adjacent slides and disposes off-screen geometry, keeping first-paint payload under 5 MB.
 - **Blender sources committed** — every instrument's `.blend` file and procedural Python builder live in `blender/` and `blender/scripts/`, exported as Draco-compressed `.glb` assets in `assets/models/`.
 
+The stationary parts and paper sweeps are photographed in Blender Cycles at 1200 × 1200 for each theme. The browser draws the moving mechanisms and lettering against those photographs using the same camera, per-pixel depth and studio reflection probes. Fonts are served locally under the OFL licenses in `assets/fonts/`. The studio panorama is the CC0 Blender Studio light by Greg Zaal. [Poly Haven](https://polyhaven.com/)
+
+To reproduce one instrument’s geometry and both photographs, run its builder, then the surface and photography passes. Blender’s executable can also be invoked by its full path.
+
+```sh
+blender -b --factory-startup -P blender/scripts/build_the_contract.py
+blender -b --factory-startup -P blender/scripts/finish_surfaces.py -- the-contract
+blender -b --factory-startup -P blender/scripts/photograph.py -- the-contract
+blender -b --factory-startup -P blender/scripts/photograph.py -- the-contract --actors
+```
+
+The moving-surface pass applies to The Contract, Discover Identity and Specimen Drawer. To rebuild the shared light and dark radiance probes, run the photography pass with `-- newton-protocol --probes`.
+
 ### Local Preview
 
 ```bash
-npx serve .
+python3 -m http.server 8000 --bind 127.0.0.1
+```
+
+### Browser verification
+
+With the local server running, use `node scripts/check-feed.mjs http://127.0.0.1:8000` to exercise the live mechanisms, snap navigation, phrase links and motion preference. The two capture scripts start their own loopback server. They use the project’s Playwright dependency, local Chrome and FFmpeg.
+
+```sh
+node scripts/capture_phase1.mjs
+node scripts/capture_final.mjs
 ```
 
 ### Proof Artifacts
+
+- `proof/phase1/phase1-demo.mp4` records the cradle, touch swipe, meter negotiation and replug with instrument audio.
+- `proof/phase1/` also contains both instruments at rest in both themes, alternate phrases and the reduced-motion plate.
 
 - `proof/final/contact-sheet.png` — 4×3 contact sheet of 1080×1080 stills for all 12 instruments at rest on `"More Cake, Please"`
 - `proof/final/stills/` — individual 1080×1080 studio renders (`01-newton-protocol.png` … `12-mechanical-typewriter.png`)
