@@ -205,6 +205,50 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   scene.add(tapeAo);
 
   // State machine
+  // Engraved alphabet bands turn with the knurled rims. Map the baseline
+  // along the axle so adjacent letters disappear naturally into the slot.
+  const ringTextures = rotors.map((rotor, index) => {
+    const strip = document.createElement('canvas');
+    strip.width = 160;
+    strip.height = 26 * 72;
+    const ink = strip.getContext('2d');
+    ink.fillStyle = '#d2bb89';
+    ink.fillRect(0, 0, strip.width, strip.height);
+    ink.font = '600 55px Georgia, serif';
+    ink.textAlign = 'center';
+    ink.textBaseline = 'middle';
+    for (let row = 0; row < 26; row++) {
+      ink.fillStyle = '#383529';
+      ink.fillText(String.fromCharCode(65 + (row + [12, 3, 18][index]) % 26), 80, 72*row + 37);
+      ink.fillStyle = '#827459';
+      ink.fillRect(16, 72*row, 128, 2);
+    }
+    const texture = new THREE.CanvasTexture(strip);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 12;
+    const positions = [], uv = [], triangles = [];
+    for (let n = 0; n <= 104; n++) {
+      const angle = n * 2*Math.PI / 104;
+      for (const x of [.115, .307]) {
+        positions.push(x, .3585*Math.cos(angle), .3585*Math.sin(angle));
+        uv.push(x === .115 ? 0 : 1, 1 - n/104);
+      }
+      if (n < 104) {
+        const k = 2*n;
+        triangles.push(k, k+2, k+1, k+1, k+2, k+3);
+      }
+    }
+    const band = new THREE.BufferGeometry();
+    band.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+    band.setAttribute('uv', new THREE.Float32BufferAttribute(uv,2));
+    band.setIndex(triangles);
+    band.computeVertexNormals();
+    rotor.add(new THREE.Mesh(band, new THREE.MeshStandardMaterial({
+      map: texture, metalness: .48, roughness: .47,
+    })));
+    return texture;
+  });
+
   let currentState = phraseStore.getState();
   let revealCount = 3; // 0..3 words stamped on tape
   let animTime = startSettled ? 2.0 : 2.0;
@@ -450,6 +494,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       canvas.removeEventListener('pointercancel', onPointerUp);
       faceTex.dispose();
       tapeTex.dispose();
+      ringTextures.forEach(texture => texture.dispose());
       scene.userData.plates.light.dispose();
       scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {
