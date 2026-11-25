@@ -88,15 +88,32 @@ def molded_shell(name, size, center, radius, lip, material):
 
 
 def cover_screw(x, y, metal, recess):
-    # The socket and annular face are concentric at this scale.
-    for name, radius, z, sides, material in [
-            ("Boss", .067, .646, 40, recess), ("Fastener", .052, .650, 40, metal),
-            ("Socket", .024, .653, 6, recess)]:
-        bpy.ops.mesh.primitive_cylinder_add(vertices=sides, radius=radius, depth=.004,
-                                            location=(x,y,z))
-        obj = bpy.context.object
-        obj.name = name
-        obj.data.materials.append(material)
+    # Machine the conical seat, annular crown and six-lobed security drive.
+    rings = [(.066, .648), (.062, .650), (.055, .656), (.049, .659),
+             (.025, .659), (.022, .655), (.021, .650)]
+    count = 72
+    vertices, faces = [], []
+    for level, (radius, height) in enumerate(rings):
+        for n in range(count):
+            theta = 2 * math.pi * n / count
+            profile = 1 - .16 * math.cos(6 * theta + x + y) if level >= 4 else 1
+            vertices.append((radius * profile * math.cos(theta),
+                             radius * profile * math.sin(theta), height))
+    for k in range(len(rings)-1):
+        for n in range(count):
+            nxt = (n+1) % count
+            faces.append((k*count+n, k*count+nxt, (k+1)*count+nxt, (k+1)*count+n))
+    faces.append(tuple(range((len(rings)-1)*count, len(vertices))))
+    mesh = bpy.data.meshes.new("Recessed drive")
+    mesh.from_pydata(vertices, [], faces)
+    obj = bpy.data.objects.new("CoverFastener", mesh)
+    bpy.context.collection.objects.link(obj)
+    obj.location = (x, y, 0)
+    mesh.materials.append(metal)
+    mesh.materials.append(recess)
+    for face in mesh.polygons:
+        face.material_index = int(face.index < count or face.index >= 5*count)
+        face.use_smooth = face.index < 5*count
 
 
 def add_stadium_extrude_x(name, length_x, width_y, height_z, location, end_bevel=0.015, mat=None, parent=None):

@@ -70,7 +70,7 @@ class StudioRuntime {
       preserveDrawingBuffer: false,
     });
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMapping = THREE.AgXToneMapping;
     renderer.toneMappingExposure = 1.04;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -105,10 +105,19 @@ class StudioRuntime {
     return this.environmentReady;
   }
 
-  async loadGLB(url) {
+  async loadGLB(url, scene) {
     // The browser caches the compressed bytes. Each mounted instrument owns the
     // decoded geometry it disposes when it leaves the three-poster window.
-    return (await this.gltfLoader.loadAsync(url)).scene;
+    const root = (await this.gltfLoader.loadAsync(url)).scene;
+    if (scene?.userData.moving?.size) {
+      root.updateMatrixWorld(true);
+      root.traverse(object => {
+        if (scene.userData.moving.has(object.userData.name ?? object.name)) {
+          object.userData.atRest = object.matrixWorld.clone();
+        }
+      });
+    }
+    return root;
   }
 
   renderToCanvas(scene, camera, targetCanvas, theme = 'light', exposureMultiplier = 1.0) {
@@ -127,6 +136,8 @@ class StudioRuntime {
     const preset = STUDIO_THEMES[theme === 'dark' ? 'dark' : 'light'];
     renderer.toneMappingExposure = preset.exposure * exposureMultiplier;
     if (!scene.userData.surfacesReady) {
+      camera.updateMatrixWorld();
+      const film = camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse);
       const depthOnly = new THREE.MeshBasicMaterial({ colorWrite: false });
       scene.traverse((object) => {
         if (object.isMesh && scene.userData.fixed.has(object.userData.name ?? object.name)) {
@@ -134,6 +145,29 @@ class StudioRuntime {
           object.castShadow = false;
           object.renderOrder = -2;
           return;
+        }
+        if (object.userData.atRest) {
+          object.material = new THREE.ShaderMaterial({
+            uniforms: { film: { value: film.clone().multiply(object.userData.atRest) },
+              radiance: scene.userData.radiance },
+            vertexShader: `
+              uniform mat4 film;
+              varying vec4 filmPoint;
+              void main() {
+                filmPoint = film * vec4(position, 1.);
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+              }
+            `,
+            fragmentShader: `
+              uniform sampler2D radiance;
+              varying vec4 filmPoint;
+              void main() {
+                vec2 uv = .5 + .5 * filmPoint.xy / filmPoint.w;
+                vec3 encoded = texture2D(radiance, uv).rgb;
+                gl_FragColor = vec4(4. * encoded * encoded, 1.);
+              }
+            `,
+          });
         }
         if (object.geometry?.attributes.color && object.material?.isMeshStandardMaterial) {
           object.material.vertexColors = true;
@@ -392,7 +426,15 @@ export async function createStudioScene(theme, instrumentId) {
   ]);
   light.colorSpace = dark.colorSpace = THREE.SRGBColorSpace;
   scene.userData.plates = { light, dark };
-  scene.userData.fixed = new Set(names);
+  scene.userData.fixed = new Set(names.fixed ?? names);
+  scene.userData.moving = new Set(names.moving);
+  if (scene.userData.moving.size) {
+    const [light, dark] = await Promise.all([
+      loader.loadAsync(base + 'light-moving.png'), loader.loadAsync(base + 'dark-moving.png'),
+    ]);
+    scene.userData.movingPlates = { light, dark };
+    scene.userData.radiance = { value: scene.userData.movingPlates[theme] };
+  }
   scene.userData.photograph = scene.userData.plates[theme];
   scene.environment = studio.environments[theme];
   scene.environmentIntensity = preset.envIntensity;
@@ -440,6 +482,7 @@ export async function createStudioScene(theme, instrumentId) {
   const applyTheme = (nextTheme) => {
     const p = STUDIO_THEMES[nextTheme === 'dark' ? 'dark' : 'light'];
     scene.userData.photograph = scene.userData.plates[nextTheme];
+    if (scene.userData.radiance) scene.userData.radiance.value = scene.userData.movingPlates[nextTheme];
     scene.environment = studio.environments[nextTheme];
     scene.environmentIntensity = p.envIntensity;
     keyLight.intensity = p.keyIntensity;

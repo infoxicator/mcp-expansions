@@ -15,13 +15,13 @@ const NEGOTIATION_STEPS = [
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
   const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'the-contract');
 
-  // Product-photography macro flat-lay framing: matchbox meter centered (~44% width) flanked by both pale grey USB-C plugs & cables
-  const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 45);
+  // Product-photography macro flat-lay framing: matchbox meter centered (macro crop) flanked by both pale grey USB-C plugs & cables
+  const camera = new THREE.PerspectiveCamera(21.5, 1, 0.1, 45);
   camera.position.set(1.40, 13.55, 5.90);
   camera.lookAt(0.26, 0.28, 0.0);
   camera.rotateZ(THREE.MathUtils.degToRad(1));
 
-  const root = await studio.loadGLB('./assets/models/the-contract.glb');
+  const root = await studio.loadGLB('./assets/models/the-contract.glb', scene);
   scene.add(root);
 
   const anodizedTex = studio.getAnodizedTexture();
@@ -204,8 +204,14 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     const w = oledCanvas.width;
     const h = oledCanvas.height;
 
-    // Deep OLED black substrate
-    ctx.fillStyle = '#050608';
+    // Broad reflected diffusion cloth stays on the glass when the emitter sleeps.
+    const glass = ctx.createLinearGradient(0, 0, w, h * .8);
+    glass.addColorStop(0, '#25292a');
+    glass.addColorStop(.34, '#171a1c');
+    glass.addColorStop(.52, '#111416');
+    glass.addColorStop(.58, '#090b0e');
+    glass.addColorStop(1, '#050608');
+    ctx.fillStyle = glass;
     ctx.fillRect(0, 0, w, h);
 
     if (phase === 'off') {
@@ -566,6 +572,8 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       canvas.removeEventListener('pointercancel', onPointerUp);
       oledTex.dispose();
       chassisDecalTex.dispose();
+      scene.userData.movingPlates.light.dispose();
+      scene.userData.movingPlates.dark.dispose();
       scene.userData.plates.light.dispose();
       scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {

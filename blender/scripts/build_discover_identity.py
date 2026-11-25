@@ -230,7 +230,7 @@ def build():
 
     # Node 0: Near Plug (SOP · M)
     n0_x = -1.26
-    add_beveled_box("NearPlugBody", (1.38, 1.02, 0.44), (n0_x, 0.0, z_mid), bevel_width=0.048, segments=4, mat=mat_plug_dark, parent=cable_root)
+    add_stadium_x("NearPlugBody", 1.40, 1.04, 0.44, (n0_x, 0.0, z_mid), end_bevel=.075, mat=mat_plug_dark, parent=cable_root)
     add_beveled_box("NearPlugBezel", (1.22, 0.84, 0.03), (n0_x, 0.0, z_mid + 0.215), bevel_width=0.01, segments=2, mat=mat_seam, parent=cable_root)
     add_uv_plane("NodeScreen0", 1.16, 0.78, (n0_x, 0.0, z_mid + 0.233), mat_screen_0, parent=cable_root)
 
@@ -242,7 +242,7 @@ def build():
 
     # Node 1: Mid-Cable Machined Aluminum E-Marker Ferrule (SOP' · C)
     n1_x = 0.72
-    add_beveled_box("FerruleBody", (1.38, 1.06, 0.46), (n1_x, 0.0, z_mid), bevel_width=0.056, segments=5, mat=mat_ferrule, parent=cable_root)
+    add_stadium_x("FerruleBody", 1.40, 1.04, 0.46, (n1_x, 0.0, z_mid), end_bevel=.075, mat=mat_ferrule, parent=cable_root)
     add_beveled_box("FerruleBezel", (1.22, 0.84, 0.03), (n1_x, 0.0, z_mid + 0.225), bevel_width=0.01, segments=2, mat=mat_seam, parent=cable_root)
     add_uv_plane("NodeScreen1", 1.16, 0.78, (n1_x, 0.0, z_mid + 0.243), mat_screen_1, parent=cable_root)
 
@@ -251,9 +251,16 @@ def build():
     add_cylinder_x("Strain1R", 0.165, 0.12, (1.44, 0.0, z_mid), segments=28, bevel_end=0.015, mat=mat_seam, parent=cable_root)
     add_cylinder_x("Strain2L", 0.165, 0.12, (1.98, 0.0, z_mid), segments=28, bevel_end=0.015, mat=mat_seam, parent=cable_root)
 
+    # Flexible molded collars taper into each cable span.
+    for i, (origin, direction) in enumerate([(-.57, 1), (.03, -1), (1.41, 1), (2.01, -1)]):
+        for step in range(3):
+            add_cylinder_x(f"Relief{i}_{step}", .16-.012*step, .052,
+                           (origin + direction * (.10+.063*step), 0, z_mid),
+                           segments=32, bevel_end=.012, mat=mat_plug_dark, parent=cable_root)
+
     # Node 2: Far Plug (SOP'' · P)
     n2_x = 2.70
-    add_beveled_box("FarPlugBody", (1.38, 1.02, 0.44), (n2_x, 0.0, z_mid), bevel_width=0.048, segments=4, mat=mat_plug_dark, parent=cable_root)
+    add_stadium_x("FarPlugBody", 1.40, 1.04, 0.44, (n2_x, 0.0, z_mid), end_bevel=.075, mat=mat_plug_dark, parent=cable_root)
     add_beveled_box("FarPlugBezel", (1.22, 0.84, 0.03), (n2_x, 0.0, z_mid + 0.215), bevel_width=0.01, segments=2, mat=mat_seam, parent=cable_root)
     add_uv_plane("NodeScreen2", 1.16, 0.78, (n2_x, 0.0, z_mid + 0.233), mat_screen_2, parent=cable_root)
 

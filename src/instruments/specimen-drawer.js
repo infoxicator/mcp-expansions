@@ -14,7 +14,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   camera.lookAt(0.0, 0.28, 0.08);
   camera.rotateZ(THREE.MathUtils.degToRad(-3));
 
-  const root = await studio.loadGLB('./assets/models/specimen-drawer.glb');
+  const root = await studio.loadGLB('./assets/models/specimen-drawer.glb', scene);
   scene.add(root);
 
   const anodizedTex = studio.getAnodizedTexture();
@@ -405,6 +405,8 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       headerTex.dispose();
       readTex.dispose();
       collarTex.dispose();
+      scene.userData.movingPlates.light.dispose();
+      scene.userData.movingPlates.dark.dispose();
       scene.userData.plates.light.dispose();
       scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {

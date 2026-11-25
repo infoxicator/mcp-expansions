@@ -1,1 +1,1 @@
-["VconnLedRing","VconnPortBezel","VconnPortCavity","VconnTerminalBody"]
+{"fixed":["VconnLedRing","VconnPortBezel","VconnPortCavity","VconnTerminalBody"],"moving":["CableSpan1","CableSpan2","FarPlugBezel","FarPlugBody","FarPlugSteel","FerruleBezel","FerruleBody","NearPlugBezel","NearPlugBody","NearPlugSteel","Relief0_0","Relief0_1","Relief0_2","Relief1_0","Relief1_1","Relief1_2","Relief2_0","Relief2_1","Relief2_2","Relief3_0","Relief3_1","Relief3_2","Strain0R","Strain1L","Strain1R","Strain2L"]}

@@ -15,7 +15,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   camera.lookAt(0.16, 0.25, 0.0);
   camera.rotateZ(THREE.MathUtils.degToRad(-13));
 
-  const root = await studio.loadGLB('./assets/models/discover-identity.glb');
+  const root = await studio.loadGLB('./assets/models/discover-identity.glb', scene);
   scene.add(root);
 
   const anodizedTex = studio.getAnodizedTexture();
@@ -421,6 +421,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       dirtyNodes = [true, true, true];
     },
 
+    readLegend() {
+      return revealedNodes.every(Boolean) ? currentState.text : '';
+    },
+
     isMoving() {
       return Boolean(seqPhase !== 'idle' || isDragging || dirtyNodes.some(Boolean) || cableX !== (isSeated ? 0 : UNSEATED_X));
     },
@@ -442,6 +446,8 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       canvas.removeEventListener('pointercancel', onPointerUp);
       termTex.dispose();
       screens.forEach((s) => s.tex.dispose());
+      scene.userData.movingPlates.light.dispose();
+      scene.userData.movingPlates.dark.dispose();
       scene.userData.plates.light.dispose();
       scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {

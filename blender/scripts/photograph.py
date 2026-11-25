@@ -5,6 +5,7 @@ import json
 import math
 import re
 import sys
+import numpy as np
 from pathlib import Path
 
 import bpy
@@ -25,6 +26,40 @@ LIVE_MATERIALS = {
     "LegendPlateMat","LedCC1","LedCC2","DrawerHeaderMat","DrawerReadoutMat","SolariBezelDecal",
 }
 PAPER = {'cipher-machine': '868775', 'combination-lock': 'ba9b68', 'destination-blind': '87969d', 'discover-identity': 'b29a7c', 'dymo-embosser': '8baca0', 'flip-contract': 'bb7453', 'jacket-legend': '9caac4', 'letterpress-lockup': 'b7a59e', 'mechanical-typewriter': 'a2a59a', 'newton-protocol': 'c2b29a', 'specimen-drawer': 'a69887', 'the-contract': '81949a'}
+
+# These groups translate without rotating. Project their measured radiance onto
+# the live meshes; occlusion, parallax and socket insertion still use real depth.
+PROJECTED = {"the-contract": ("RightPlugRoot",), "discover-identity": ("CableAssembly",),
+             "specimen-drawer": tuple(f"Specimen{i}" for i in range(5))}
+
+
+def moving_surface(obj, name):
+    if any(m and (m.name.startswith(("SpecLed","NodeScreen")) or m.name in LIVE_MATERIALS)
+           for m in obj.data.materials):
+        return False
+    while obj:
+        if obj.name in PROJECTED.get(name, ()):
+            return True
+        obj = obj.parent
+    return False
+
+
+def save_radiance(exr, destination):
+    # Store linear light in a compact gamma-2 encoding. Alpha is geometric coverage.
+    img = bpy.data.images.load(str(exr))
+    w,h = img.size
+    source = np.empty(w*h*4, dtype=np.float32)
+    img.pixels.foreach_get(source)
+    rgba = source.reshape(h,w,4)
+    alpha = rgba[:,:,3:4]
+    rgba[:,:,:3] = np.sqrt(np.clip(rgba[:,:,:3] / np.maximum(alpha,.001) / 4, 0, 1))
+    encoded = bpy.data.images.new('Projected radiance', width=w,height=h,alpha=True)
+    encoded.colorspace_settings.name = 'Non-Color'
+    encoded.pixels.foreach_set(rgba.ravel())
+    encoded.file_format = 'PNG'
+    encoded.filepath_raw = str(destination)
+    encoded.save()
+
 
 FINISH = {
     "MeterMatteBlack": ("292b2d", .14, .56), "MeterBezel": ("151619", .28, .36),
@@ -125,14 +160,20 @@ def photograph(source):
     bpy.ops.wm.open_mainfile(filepath=str(source.resolve()))
     scene = bpy.context.scene
     js = (Path('src/instruments') / (name + '.js')).read_text()
-    fixed = []
+    actors = '--actors' in sys.argv
+    fixed, projected = [], []
     for obj in scene.objects:
         if obj.type != "MESH":
             continue
+        if moving_surface(obj, name):
+            projected.append(obj.name)
         if is_live(obj):
             obj.hide_render = True
         else:
             fixed.append(obj.name)
+        if actors:
+            obj.hide_render = False
+            obj.visible_camera = obj.name in projected
     for mat in list(bpy.data.materials):
         finish(mat)
 
@@ -148,6 +189,7 @@ def photograph(source):
     mesh.from_pydata(verts,[],quads)
     sweep = bpy.data.objects.new('Paper sweep',mesh)
     bpy.context.collection.objects.link(sweep)
+    sweep.visible_camera = not actors
     for f in mesh.polygons: f.use_smooth = True
     paper = bpy.data.materials.new("Uncoated paper")
     paper.use_nodes = True
@@ -201,7 +243,8 @@ def photograph(source):
     scene.view_settings.view_transform = 'AgX'
     dest = Path('assets/plates') / name
     dest.mkdir(parents=True,exist_ok=True)
-    (dest / 'hardware.json').write_text(json.dumps(sorted(fixed), separators=(',',':'))+'\n')
+    manifest = {'fixed': sorted(fixed), 'moving': sorted(projected)} if projected else sorted(fixed)
+    (dest / 'hardware.json').write_text(json.dumps(manifest, separators=(',',':'))+'\n')
     probes = '--probes' in sys.argv
     if probes:
         # A chrome surface sees the diffusion cloth itself. Sample the actual
@@ -238,8 +281,15 @@ def photograph(source):
         key.energy = 790 if mode=='light' else 585
         fill.energy = 210 if mode=='light' else 155
         scene.render.filepath = str((dest/(mode+'.webp')).resolve())
+        if actors:
+            scene.render.film_transparent = True
+            scene.render.image_settings.file_format = 'OPEN_EXR'
+            scene.render.image_settings.color_mode = 'RGBA'
+            scene.render.filepath = str((Path('tmp')/(name+'-'+mode+'-radiance.exr')).resolve())
         if probes: scene.render.filepath = str((Path('assets/lighting')/(mode+'.hdr')).resolve())
         bpy.ops.render.render(write_still=True)
+        if actors:
+            save_radiance(Path(scene.render.filepath), (dest / (mode+'-moving.png')).resolve())
         print('Photographed', name, mode, flush=True)
 
 
