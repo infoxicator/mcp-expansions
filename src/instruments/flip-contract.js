@@ -155,6 +155,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
   // State machine
   let currentState = phraseStore.getState();
+  const orientations = [currentState, null];
   let ccChannel = 1; // 1 => Side A (0 deg), 2 => Side B (180 deg)
   let flipState = 'seated'; // 'seated' | 'flipping'
   let flipTime = 0;
@@ -309,8 +310,12 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
         flipState = 'seated';
         swappedMidFlip = false;
         ccChannel = ccChannel === 1 ? 2 : 1;
-        phraseStore.nextRandom({ source: 'flip-contract' });
-        currentState = phraseStore.getState();
+        const saved = orientations[ccChannel - 1];
+        const source = { source: 'flip-contract' };
+        if (!saved) currentState = phraseStore.nextRandom(source);
+        else if (saved.isRemix) currentState = phraseStore.setRemix(saved.words, source);
+        else currentState = phraseStore.setById(saved.id, source);
+        orientations[ccChannel - 1] = currentState;
         sound.playUsbPlug();
         plateDirty = true;
       }
@@ -341,6 +346,8 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     setPhrase(state, meta = {}) {
       currentState = state;
       if (meta.source === 'flip-contract') return;
+      orientations[ccChannel - 1] = state;
+      if (orientations[2 - ccChannel]?.text === state.text) orientations[2 - ccChannel] = null;
       plateDirty = true;
     },
 
