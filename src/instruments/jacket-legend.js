@@ -341,7 +341,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     canvas.setPointerCapture?.(e.pointerId);
     isDragging = true;
     dragMoved = false;
-    coiledDuringDrag = false;
+    coiledDuringDrag = tension < 0.25;
     cyclePhase = 'idle';
     dragStartX = e.clientX;
     dragStartTension = tension;
