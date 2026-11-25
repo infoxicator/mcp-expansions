@@ -8,14 +8,14 @@ Twelve interactive square posters for MCP’s second birthday. Each instrument p
 |---|---|---|---|
 | 01 | `newton-protocol` | **Newton Protocol** | Tap the `M` sphere to replay, pull harder for a new phrase, or use `Space` |
 | 02 | `the-contract` | **The Contract** | Plug in the USB-C cable (`5V → 9V → 15V → 20V`) to negotiate and lock a phrase |
-| 03 | `cipher-machine` | **Cipher Machine** | Turn the brass hand crank or press `Space` to stamp a fresh paper tape |
-| 04 | `jacket-legend` | **Jacket Legend** | Pull the USB-C jacket taut to read its printed `AWM 2725` legend |
+| 03 | `cipher-machine` | **Cipher Machine** | Turn the brass rotors or press `Space` to stamp a fresh paper tape |
+| 04 | `jacket-legend` | **Jacket Legend** | Pull the USB-C jacket taut to read its jacket legend and power ratings |
 | 05 | `discover-identity` | **Discover Identity** | Seat the VCONN cable to wake the `SOP / SOP' / SOP''` e-marker chips |
 | 06 | `flip-contract` | **Flip Contract** | Flip the USB-C plug 180° (`CC1` ↔ `CC2`) to negotiate a new orientation contract |
-| 07 | `specimen-drawer` | **Specimen Drawer** | Pick any of the 5 coiled specimen cables in the anodized studio tray |
+| 07 | `specimen-drawer` | **Specimen Drawer** | Select a specimen in the three-bay oak archive drawer |
 | 08 | `destination-blind` | **Destination Blind** | Click the Solari split-flap board or press `Space` to roll all three rows |
 | 09 | `letterpress-lockup` | **Letterpress Lockup** | Pull a fresh debossed archival proof sheet from the brass-quoined iron chase |
-| 10 | `dymo-embosser` | **Dymo Embosser** | Squeeze the trigger wheel to emboss raised white vinyl M · C · P label strips |
+| 10 | `dymo-embosser` | **Dymo Embosser** | Squeeze the trigger wheel to emboss a phrase on one length of black vinyl |
 | 11 | `combination-lock` | **Combination Lock** | Spin the three coaxial word tumblers to dial a new phrase and pop the chrome shackle |
 | 12 | `mechanical-typewriter` | **Mechanical Typewriter** | Strike the `M`, `C`, `P` keys to clack a fresh phrase onto archival cotton bond paper |
 
@@ -24,7 +24,7 @@ Twelve interactive square posters for MCP’s second birthday. Each instrument p
 - **Navigate feed**: Mouse wheel, trackpad swipe, touch swipe, `↑` / `↓`, or `j` / `k`
 - **Operate instrument**: Direct click/drag on the hardware or `Space`
 - **Index drawer**: `/` to search and filter all 85 entries in `phrases.json` (`Birthday`, `Protocol`, `Dev`, `Absurd`, `Skeptic`)
-- **Theme**: `T` toggles light and dark studio sweeps
+- **Theme**: `T` toggles light and dark themes
 - **Deep links**:
   - `?i=<instrument-id>` — jump directly to any instrument (e.g. `?i=combination-lock`)
   - `?p=<phrase-slug>` — load any curated phrase (e.g. `?p=more-cake-please`)
@@ -33,22 +33,9 @@ Twelve interactive square posters for MCP’s second birthday. Each instrument p
 
 ## Architecture & Static Hosting
 
-- **Zero build step** — pure ES modules with vendored Three.js + Draco WASM decoder (`vendor/three/`), deployable on any static host.
-- **Lazy-loaded hardware** — a single shared WebGL2 renderer mounts only adjacent slides and disposes off-screen geometry, keeping first-paint payload under 5 MB.
-- **Blender sources committed** — every instrument's `.blend` file and procedural Python builder live in `blender/` and `blender/scripts/`, exported as Draco-compressed `.glb` assets in `assets/models/`.
+The site is a set of static ES modules. The current poster and its immediate neighbours load on approach. At rest the feed retains the last rendered frame. A photo plate supplies the working surface and hardware of each instrument. The renderer registers moving parts, light emitters and live type in the same coordinate space. Newton uses engraved steel sprites on bifilar threads with a nonlinear pendulum and impulse solver.
 
-The stationary parts and paper sweeps are photographed in Blender Cycles at 1200 × 1200 for each theme. The browser draws the moving mechanisms and lettering against those photographs using the same camera, per-pixel depth and studio reflection probes. Fonts are served locally under the OFL licenses in `assets/fonts/`. The studio panorama is the CC0 Blender Studio light by Greg Zaal. [Poly Haven](https://polyhaven.com/)
-
-To reproduce one instrument’s geometry and both photographs, run its builder, then the surface and photography passes. Blender’s executable can also be invoked by its full path.
-
-```sh
-blender -b --factory-startup -P blender/scripts/build_the_contract.py
-blender -b --factory-startup -P blender/scripts/finish_surfaces.py -- the-contract
-blender -b --factory-startup -P blender/scripts/photograph.py -- the-contract
-blender -b --factory-startup -P blender/scripts/photograph.py -- the-contract --actors
-```
-
-The moving-surface pass applies to The Contract, Discover Identity and Specimen Drawer. To rebuild the shared light and dark radiance probes, run the photography pass with `-- newton-protocol --probes`.
+The photographic plates in `assets/photographs/` were made with ImageGen. The Blender sources, compressed meshes, lighting probes and previous render plates are retained in `blender/` and `assets/`. The locally served fonts and their OFL licences are in `assets/fonts/`.
 
 ### Local Preview
 
@@ -71,7 +58,7 @@ node scripts/capture_final.mjs
 - `proof/phase1/` also contains both instruments at rest in both themes, alternate phrases and the reduced-motion plate.
 
 - `proof/final/contact-sheet.png` — 4×3 contact sheet of 1080×1080 stills for all 12 instruments at rest on `"More Cake, Please"`
-- `proof/final/stills/` — individual 1080×1080 studio renders (`01-newton-protocol.png` … `12-mechanical-typewriter.png`)
+- `proof/final/stills/` — individual 1080×1080 browser captures (`01-newton-protocol.png` … `12-mechanical-typewriter.png`)
 - `proof/final/full-feed-demo.mp4` — full-feed swipe recording scrolling through all 12 instruments and operating hardware live
 
 ## Contributing a Phrase
