@@ -345,7 +345,7 @@ def build():
     mat_chrome = make_material("TypeBrushedChrome", (0.84, 0.86, 0.88), metallic=0.96, roughness=0.18)
     mat_steel = make_material("TypeMachinedSteel", (0.66, 0.69, 0.72), metallic=0.92, roughness=0.28)
     mat_brass = make_material("TypeBrassAccent", (0.78, 0.62, 0.30), metallic=0.92, roughness=0.24)
-    mat_vermilion = make_material("TypeVermilionFelt", (0.62, 0.12, 0.09), metallic=0.05, roughness=0.72)
+    mat_vermilion = make_material("TypeVermilionFelt", (.090, .014, .009), metallic=0.05, roughness=0.72)
     mat_paper = make_material("TypePaperSheet", (0.95, 0.93, 0.88), metallic=0.0, roughness=0.88)
 
     # ── 1. Machined Matte-Charcoal Typewriter Deck Chassis ──
@@ -363,9 +363,18 @@ def build():
 
     # Ribbon spools nestled inside left and right ribbon wells
     for sx, side in ((-1.42, "L"), (1.42, "R")):
-        add_cylinder_axis(f"RibbonSpoolBase_{side}", 0.34, 0.06, (sx, -0.62, 0.66), axis="Z", segments=32, bevel_end=0.008, mat=mat_steel)
-        add_cylinder_axis(f"RibbonSpoolHub_{side}", 0.11, 0.11, (sx, -0.62, 0.69), axis="Z", segments=24, bevel_end=0.01, mat=mat_brass)
-        add_cylinder_axis(f"RibbonTape_{side}", 0.28, 0.04, (sx, -0.62, 0.68), axis="Z", segments=32, bevel_end=0.004, mat=mat_rubber)
+        lacquer = make_material("Spool lacquer "+side,(.028,.026,.022),metallic=.35,roughness=.38)
+        add_cylinder_axis("Spool bottom "+side,.345,.027,(sx,-.62,.651),axis="Z",mat=lacquer)
+        add_cylinder_axis("Ink winding "+side,.29 if side=="L" else .24,.055,(sx,-.62,.691),axis="Z",mat=mat_rubber)
+        add_cylinder_axis("Spool hub "+side,.096,.09,(sx,-.62,.712),axis="Z",mat=lacquer)
+        bpy.ops.mesh.primitive_torus_add(major_radius=.319,minor_radius=.022,major_segments=64,minor_segments=8,location=(sx,-.62,.728))
+        bpy.context.object.name = "Rolled reel lip "+side
+        bpy.context.object.data.materials.append(lacquer)
+        for j in range(5):
+            a = j*math.tau/5+.28
+            add_beveled_box("Pressed spoke",(.061,.265,.018),(sx+.189*math.sin(a),-.62+.189*math.cos(a),.729),
+                            rotation=(0,0,-a),bevel_width=.008,segments=3,mat=lacquer)
+        add_cylinder_axis("Spindle "+side,.034,.023,(sx,-.62,.767),axis="Z",mat=mat_steel)
 
     # Vermilion felt arc cushion supporting the resting typebar fan
     felt_segs = 16
@@ -386,17 +395,17 @@ def build():
 
     # ── 2. Fanned Brushed-Steel Typebar Basket + Pivoting Strike Bar ──
     # 13 resting typebars fanned cleanly in semicircular arc toward the strike point (0, 0.04, 0.82)
-    bar_count = 13
+    bar_count = 41
     for i in range(bar_count):
         if i == bar_count // 2:
             continue  # center bar is ActiveTypebar so it animates cleanly
         frac = (i / (bar_count - 1)) - 0.5
-        ang = frac * 1.48
+        ang = frac * 1.96
         bx = math.sin(ang) * 0.56
         by = 0.02 - math.cos(ang) * 0.56
         add_beveled_box(
             f"Typebar_{i}",
-            (0.032, 0.88, 0.024),
+            (.014, .88, .024),
             (bx, by, 0.72),
             rotation=(0.14, 0.0, ang),
             bevel_width=0.004,
@@ -408,7 +417,7 @@ def build():
         sy = 0.02 - math.cos(ang) * 0.94
         add_beveled_box(
             f"TypeSlug_{i}",
-            (0.068, 0.095, 0.052),
+            (.029, .095, .052),
             (sx, sy, 0.78),
             rotation=(0.14, 0.0, ang),
             bevel_width=0.006,
