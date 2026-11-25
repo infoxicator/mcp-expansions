@@ -4,16 +4,16 @@ import { sound } from '../core/audio.js';
 
 const SEGMENTS_U = 112;
 const SEGMENTS_V = 28;
-const CABLE_RADIUS = 0.24;
+const CABLE_RADIUS = 0.15;
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
   const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'jacket-legend');
 
   // Macro overhead product flat-lay camera framing the full cable + both anodized USB-C plugs & stainless tongues
-  const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 50);
-  camera.position.set(0.0, 12.9, 2.60);
-  camera.lookAt(0.0, 0.22, 0.0);
-  camera.rotateZ(THREE.MathUtils.degToRad(-14));
+  const camera = new THREE.PerspectiveCamera(31, 1, 0.1, 50);
+  camera.position.set(.15, 12.10, 4.65);
+  camera.lookAt(.31, .08, -.02);
+  camera.rotateZ(THREE.MathUtils.degToRad(-18));
 
   const root = await studio.loadGLB('./assets/models/jacket-legend.glb');
   scene.add(root);
@@ -88,6 +88,14 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     sheenColor: new THREE.Color(0x50545c),
   });
 
+  const coil = root.getObjectByName('CoilStock');
+  if (coil) {
+    const stock = cableMat.clone();
+    stock.map = null;
+    stock.color.set('#aeada7');
+    coil.material = stock;
+  }
+
   // Dynamic cable geometry with locked upright crown UV (v = 0.5 faces +Y toward camera)
   const vertexCount = (SEGMENTS_U + 1) * (SEGMENTS_V + 1);
   const positions = new Float32Array(vertexCount * 3);
@@ -140,26 +148,12 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   const worldUp = new THREE.Vector3(0, 1, 0);
 
   function sampleCenterline(t, tension, out) {
-    // Straight taut target
-    const sx = -2.18 + t * 4.36;
-    const sy = CABLE_RADIUS + 0.015;
-    const sz = 0.0;
-
-    // Coiled studio S-loop target (t=0 left plug, loops gracefully into a central coil, exits right plug)
-    const ang = (t - 0.5) * Math.PI * 2.15;
-    const cx = (t - 0.5) * 3.15 - Math.sin(ang) * 0.92;
-    const cz = Math.sin(t * Math.PI) * 1.18 * Math.cos(ang * 0.85) - 0.12 * Math.sin(t * Math.PI * 2);
-    // Tiny natural vertical arch at loop crossing so cable never self-intersects
-    const lift = Math.sin(t * Math.PI) * Math.max(0, Math.cos((t - 0.62) * Math.PI * 3.5)) * 0.24;
-    const cy = CABLE_RADIUS + 0.015 + lift;
-
-    // Smooth cubic ease on tension
-    const k = tension * tension * (3.0 - 2.0 * tension);
-    out.set(
-      cx + (sx - cx) * k,
-      cy + (sy - cy) * k,
-      cz + (sz - cz) * k
-    );
+    // The anchored end leaves the coil tangentially. Only the free end is pulled.
+    const k = tension*tension*(3-2*tension);
+    const angle = 1.67*Math.PI*t;
+    const x = (1-k)*.63*Math.sin(angle) + k*2.60*t;
+    const z = (1-k)*.63*(1-Math.cos(angle)) + k*(.055*t + .105*t*t);
+    out.set(-1.13+x, .158+.029*t + (1-k)*.18*t*t, .90+z);
     return out;
   }
 
@@ -211,7 +205,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     cableGeo.computeBoundingSphere();
 
     // Anchor PlugLeft & PlugRight flush with cable endpoints & tangents
-    const strainOffset = 1.02;
+    const strainOffset = .81;
     if (plugLeft) {
       sampleCenterline(0.0, tension, tmpP);
       sampleCenterline(0.02, tension, tmpP2);
@@ -246,14 +240,14 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   inkTile.width = 67;
   inkTile.height = 43;
   const ink = inkTile.getContext('2d');
-  ink.fillStyle = '#e8e6d9';
+  ink.fillStyle = '#151611';
   ink.fillRect(0, 0, inkTile.width, inkTile.height);
   let grainSeed = 83;
   for (let n = 0; n < 220; n++) {
     grainSeed = (grainSeed * 16807) % 2147483647;
     const x = grainSeed % inkTile.width;
     grainSeed = (grainSeed * 16807) % 2147483647;
-    ink.fillStyle = n % 4 ? '#bdbbb0' : '#504f49';
+    ink.fillStyle = n % 4 ? '#4b4941' : '#878378';
     ink.fillRect(x, grainSeed % inkTile.height, 1, 1);
   }
   const jacketInk = lctx.createPattern(inkTile, 'repeat');
@@ -264,7 +258,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     const h = legendCanvas.height;
 
     // Deep matte-black TPE cable jacket base
-    ctx.fillStyle = '#15171A';
+    ctx.fillStyle = '#aeada7';
     ctx.fillRect(0, 0, w, h);
 
     // Subtle extruded rubber micro-streaks along the cable length
@@ -274,7 +268,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     }
 
     const words = currentState.cleanWords.map((word) => word.replace(/,$/, '').toUpperCase());
-    const phraseText = words.join('   ');
+    const phraseText = words.join('  ');
 
     // Top crown sits at y = h * 0.5 (v = 0.5). Print authentic industrial white inkjet specification legend
     // in two calibrated tiers: crisp AWM spec hairline above + bold readable 3-word legend centered on crown.
@@ -286,17 +280,16 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
     // Subtle technical AWM header strip above the main words
     ctx.save();
-    ctx.translate(w * 0.5, cy - 42);
+    ctx.translate(w * 0.5, cy - 55);
     ctx.scale(1.28, 1.0);
-    ctx.fillStyle = 'rgba(232, 230, 224, 0.56)';
-    ctx.font = '500 22px "JetBrains Mono", ui-monospace, monospace';
-    const idxStr = currentState.isRemix ? 'REMIX' : `${String(currentState.index + 1).padStart(3, '0')}/${String(currentState.total).padStart(3, '0')}`;
-    ctx.fillText(`AWM  2725  80°C  30V  ·  E321048  ·  USB4  240W  ·  MCP  ${idxStr}`, 0, 0);
+    ctx.fillStyle = 'rgba(32, 31, 28, .92)';
+    ctx.font = '600 32px "JetBrains Mono", ui-monospace, monospace';
+    ctx.fillText(`100W   20V/5A   E-MARKED   ·   AWM 2725`, 0, 0);
     ctx.restore();
 
     // Main bold white inkjet phrase along the crown centerline (aspect-compensated for cable length/circumference ratio)
-    const maxW = (w - 150) / 1.32;
-    let fontSize = 74;
+    const maxW = (w - 150) / 1.84;
+    let fontSize = 104;
     while (fontSize > 34) {
       ctx.font = `600 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
       if (ctx.measureText(phraseText).width <= maxW) break;
@@ -305,16 +298,16 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
     ctx.save();
     ctx.translate(w * 0.5, cy + 16);
-    ctx.scale(1.32, 1.0);
+    ctx.scale(1.84, 1.0);
     ctx.fillStyle = jacketInk;
     ctx.font = `600 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
     ctx.fillText(phraseText, 0, 0);
     ctx.restore();
 
-    const textW = ctx.measureText(phraseText).width * 1.32;
+    const textW = ctx.measureText(phraseText).width * 1.84;
     const edgeL = Math.max(46, w * 0.5 - textW * 0.5 - 32);
     const edgeR = Math.min(w - 46, w * 0.5 + textW * 0.5 + 32);
-    ctx.fillStyle = 'rgba(232, 230, 224, 0.34)';
+    ctx.fillStyle = 'rgba(48, 46, 42, .38)';
     if (edgeL > 90) ctx.fillRect(46, cy + 15, edgeL - 62, 3);
     if (w - edgeR > 90) ctx.fillRect(edgeR + 16, cy + 15, w - 46 - edgeR - 16, 3);
 

@@ -155,31 +155,30 @@ def add_usbc_plug(name, direction, mat_overmold, mat_strain, mat_alu, mat_steel)
         mat=mat_steel,
         parent=root,
     )
+    for side in (-1,1):
+        add_stadium_extrude_x(f"{name}_Stake{side}", .026, .080, .004,
+                     (-direction*.83,side*.105,.0955), .001, mat_overmold, root)
+    add_stadium_extrude_x(f"{name}_Insert", .004, .414, .126,
+                     (-direction*1.220,0,0), .001, mat_overmold, root)
     return root
 
 
-def add_cable_reference_mesh(name, mat_jacket):
-    """Reference straight cable cylinder in the .blend so the file is self-contained (replaced dynamically in Three.js)."""
-    mesh = bpy.data.meshes.new(name)
-    obj = bpy.data.objects.new(name, mesh)
+def add_free_end(mat):
+    path = bpy.data.curves.new("Free cable end","CURVE")
+    path.dimensions = "3D"
+    path.bevel_depth, path.bevel_resolution = .15, 6
+    line = path.splines.new('POLY')
+    line.points.add(32)
+    for i, point in enumerate(line.points):
+        t = i/32
+        point.co = (-1.13+2.60*t, -(.9+.055*t+.105*t*t),.158+.029*t,1)
+    obj = bpy.data.objects.new("CableJacketRef",path)
     bpy.context.collection.objects.link(obj)
-    bm = bmesh.new()
-    bmesh.ops.create_cone(
-        bm,
-        cap_ends=True,
-        cap_tris=False,
-        segments=32,
-        radius1=0.22,
-        radius2=0.22,
-        depth=4.6,
-    )
-    bm.to_mesh(mesh)
-    bm.free()
-    obj.location = Vector((0.0, 0.0, 0.24))
-    obj.rotation_euler = (0.0, math.pi * 0.5, 0.0)
-    set_smooth(obj)
-    obj.data.materials.append(mat_jacket)
-    return obj
+    path.materials.append(mat)
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.convert(target='MESH')
 
 
 def build():
@@ -191,13 +190,45 @@ def build():
     mat_steel = make_material("USBC_Steel", (0.78, 0.80, 0.82), metallic=0.96, roughness=0.20)
     mat_jacket = make_material("CableJacketRef", (0.032, 0.034, 0.038), metallic=0.0, roughness=0.64)
 
-    plug_l = add_usbc_plug("PlugLeft", direction=1.0, mat_overmold=mat_overmold, mat_strain=mat_strain, mat_alu=mat_alu, mat_steel=mat_steel)
-    plug_l.location = Vector((-3.25, 0.0, 0.24))
-
-    plug_r = add_usbc_plug("PlugRight", direction=-1.0, mat_overmold=mat_overmold, mat_strain=mat_strain, mat_alu=mat_alu, mat_steel=mat_steel)
-    plug_r.location = Vector((3.25, 0.0, 0.24))
-
-    add_cable_reference_mesh("CableJacketRef", mat_jacket)
+    # One continuous wound lead with a tangent free end for the printed legend.
+    stock = make_material("CoilStock", (.60,.59,.54), roughness=.54)
+    curve = bpy.data.curves.new("Wound jacket","CURVE")
+    curve.dimensions = '3D'
+    curve.resolution_u = 8
+    curve.bevel_depth = .15
+    curve.bevel_resolution = 6
+    spline = curve.splines.new('BEZIER')
+    count = 100
+    lead = [Vector((-.58,.44,.158)), Vector((-.93,.44,.158)), Vector((-1.31,.23,.158)),
+            Vector((-1.31,.03,.158)), Vector((-1.14,-.12,.158))]
+    points = list(lead)
+    for i in range(count+1):
+        u = i/count
+        angle = -math.pi/2 - 4*math.pi*(1-u)
+        rx, ry = 1.18+.92*u,.66+.73*u
+        points.append(Vector((-.60+rx*math.cos(angle)-.53*u**4,
+              .49+ry*math.sin(angle),.158+.012*math.sin(angle*2)**2)))
+    spline.bezier_points.add(len(points)-1)
+    for point,coord in zip(spline.bezier_points, points):
+        point.co = coord
+        point.handle_left_type = point.handle_right_type = 'AUTO'
+    coil = bpy.data.objects.new("CoilStock",curve)
+    bpy.context.collection.objects.link(coil)
+    curve.materials.append(stock)
+    bpy.ops.object.select_all(action='DESELECT')
+    coil.select_set(True)
+    bpy.context.view_layer.objects.active = coil
+    bpy.ops.object.convert(target='MESH')
+    plug_l = add_usbc_plug("RearTerminal", direction=1, mat_overmold=mat_overmold, mat_strain=mat_strain, mat_alu=mat_alu, mat_steel=mat_steel)
+    tangent = (points[1]-points[0]).normalized()
+    plug_l.location = points[0] - tangent*.61
+    plug_l.rotation_euler.z = math.atan2(tangent.y,tangent.x)
+    plug_l.scale = (.57,)*3
+    plug_r = add_usbc_plug("PlugRight", direction=-1, mat_overmold=mat_overmold, mat_strain=mat_strain, mat_alu=mat_alu, mat_steel=mat_steel)
+    plug_r.scale = (.78,)*3
+    plug_r.location = (2.276,-1.142,.187)
+    plug_r.rotation_euler.z = -.101
+    add_free_end(stock)
 
     os.makedirs(os.path.dirname(OUT_BLEND), exist_ok=True)
     os.makedirs(os.path.dirname(OUT_GLB), exist_ok=True)
