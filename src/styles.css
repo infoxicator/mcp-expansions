@@ -258,15 +258,14 @@ body {
 .small-print-transcript { display: none; }
 
 @media (max-width: 540px), (max-height: 460px) {
-  .small-print-transcript {
+  .poster-caption { flex-wrap: wrap; }
+  .small-print-transcript:not(:empty) {
     display: block;
-    position: absolute;
-    inset: auto 7% 8%;
+    order: -1;
+    flex-basis: 100%;
     color: var(--ink);
-    font: 400 clamp(17px, 5.3vmin, 26px)/1.15 var(--serif);
-    text-align: center;
+    font: 400 clamp(18px, 5vmin, 25px)/1.1 var(--serif);
     overflow-wrap: anywhere;
-    pointer-events: none;
   }
 }
 
@@ -411,16 +410,16 @@ body {
   position: absolute;
   left: 6%;
   right: 6%;
-  bottom: 9%;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  bottom: 16.5%;
+  display: flex;
+  justify-content: center;
   align-items: baseline;
   text-align: center;
-  gap: 8px;
+  gap: .16em;
   pointer-events: none;
   font-family: var(--serif);
   font-size: clamp(28px, 5.4%, 56px);
-  font-size: calc(var(--poster-size) * 0.085);
+  font-size: calc(var(--poster-size) * var(--newton-size, .119));
   line-height: 1.05;
   letter-spacing: -0.02em;
   color: var(--ink);
@@ -786,9 +785,9 @@ body.is-poster-only .poster-frame {
 .newton-word:not(:last-child) { -webkit-text-stroke: .012em currentColor; }
 .instrument-fineprint {
   position: absolute;
-  inset: auto 0 3.8%;
+  inset: auto 0 10.5%;
   text-align: center;
-  font: 400 clamp(8px, calc(var(--poster-size) * .013), 14px)/1.2 var(--mono);
+  font: 400 clamp(8px, calc(var(--poster-size) * .018), 20px)/1.2 var(--mono);
   letter-spacing: .045em;
   color: var(--ink);
   pointer-events: none;
@@ -797,4 +796,10 @@ body.is-poster-only .poster-frame {
   inset: auto 4% 4% auto;
   writing-mode: vertical-rl;
   color: #e4d5b5;
+}
+
+[data-id="newton-protocol"] .newton-word:last-child { color: #746c62; }
+[data-theme="dark"] [data-id="newton-protocol"] .newton-word:last-child { color: #d0c8b9; }
+[data-theme="dark"] .slide:not([data-id="newton-protocol"]) .poster-canvas {
+  filter: brightness(.79) contrast(1.08) saturate(.84);
 }

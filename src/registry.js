@@ -19,7 +19,7 @@ export const INSTRUMENTS = [
     id: 'cipher-machine',
     number: '03',
     title: 'Cipher Machine',
-    cue: 'Turn crank or press Space',
+    cue: 'Turn rotors or press Space',
     modulePath: './instruments/cipher-machine.js',
   },
   {

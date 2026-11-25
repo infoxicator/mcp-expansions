@@ -5,17 +5,10 @@ function svgDiagramFor(instrumentId) {
     case 'newton-protocol':
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 150" fill="none" stroke="currentColor" aria-hidden="true">
-          <path d="M46 130 V24 Q46 16 54 16 H266 Q274 16 274 24 V130" stroke-width="2" opacity="0.5"/>
-          <line x1="28" y1="132" x2="292" y2="132" stroke-width="3" opacity="0.7"/>
-          <line x1="112" y1="16" x2="112" y2="78" stroke-width="1" opacity="0.45"/>
-          <line x1="160" y1="16" x2="160" y2="78" stroke-width="1" opacity="0.45"/>
-          <line x1="208" y1="16" x2="208" y2="78" stroke-width="1" opacity="0.45"/>
-          <circle cx="112" cy="96" r="21" stroke-width="1.5"/>
-          <circle cx="160" cy="96" r="21" stroke-width="1.5"/>
-          <circle cx="208" cy="96" r="21" stroke-width="1.5"/>
-          <text x="112" y="100" text-anchor="middle" font-size="13" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">M</text>
-          <text x="160" y="100" text-anchor="middle" font-size="13" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">C</text>
-          <text x="208" y="100" text-anchor="middle" font-size="13" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">P</text>
+          <rect x="105" y="11" width="126" height="126" stroke-width="4"/>
+          <path d="M137 12L78 65M168 12V78M200 12V78" stroke-width="1" opacity=".65"/>
+          <g stroke-width="1.5"><circle cx="67" cy="76" r="16"/><circle cx="168" cy="94" r="16"/><circle cx="200" cy="94" r="16"/></g>
+          <g fill="currentColor" stroke="none" text-anchor="middle" font-size="12" font-family="monospace"><text x="67" y="80">M</text><text x="168" y="98">C</text><text x="200" y="98">P</text></g>
         </svg>`;
     case 'the-contract':
       return `
@@ -24,8 +17,9 @@ function svgDiagramFor(instrumentId) {
           <rect x="72" y="48" width="26" height="24" rx="5" stroke-width="1.4" opacity="0.6"/>
           <rect x="98" y="24" width="124" height="72" rx="10" stroke-width="1.6"/>
           <rect x="112" y="36" width="96" height="48" rx="4" stroke-width="1" opacity="0.5"/>
-          <text x="160" y="55" text-anchor="middle" font-size="9.5" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace" opacity="0.7">20.0V · PD OK</text>
-          <text x="160" y="71" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">M · C · P</text>
+          <g fill="currentColor" stroke="none" font-size="10" font-family="monospace">
+            <text x="121" y="49">M</text><text x="121" y="62">C</text><text x="121" y="75">P</text>
+          </g>
           <rect x="222" y="48" width="26" height="24" rx="5" stroke-width="1.4" opacity="0.6"/>
           <line x1="248" y1="60" x2="310" y2="60" stroke-width="3" opacity="0.45"/>
         </svg>`;
@@ -33,13 +27,13 @@ function svgDiagramFor(instrumentId) {
       return `
         <svg class="fallback-diagram" viewBox="0 0 320 140" fill="none" stroke="currentColor" aria-hidden="true">
           <rect x="64" y="18" width="184" height="68" rx="8" stroke-width="1.6"/>
-          <rect x="92" y="28" width="26" height="40" rx="3" stroke-width="1.2" opacity="0.7"/>
-          <rect x="143" y="28" width="26" height="40" rx="3" stroke-width="1.2" opacity="0.7"/>
-          <rect x="194" y="28" width="26" height="40" rx="3" stroke-width="1.2" opacity="0.7"/>
+          <circle cx="105" cy="48" r="16" stroke-width="1.2" opacity="0.7"/>
+          <circle cx="156" cy="48" r="16" stroke-width="1.2" opacity="0.7"/>
+          <circle cx="207" cy="48" r="16" stroke-width="1.2" opacity="0.7"/>
           <text x="105" y="52" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">M</text>
           <text x="156" y="52" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">C</text>
           <text x="207" y="52" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="JetBrains Mono, monospace">P</text>
-          <path d="M248 52 H274 V26 H286" stroke-width="2" opacity="0.65"/>
+          <g stroke-width="1.5"><circle cx="78" cy="49" r="6"/><circle cx="232" cy="49" r="6"/></g>
           <rect x="96" y="86" width="120" height="40" stroke-width="1.2" opacity="0.6"/>
           <line x1="110" y1="101" x2="202" y2="101" stroke-width="1" opacity="0.45"/>
           <line x1="110" y1="113" x2="188" y2="113" stroke-width="1" opacity="0.45"/>

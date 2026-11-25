@@ -1,8 +1,19 @@
 import { INSTRUMENTS, findInstrumentIndex } from './registry.js';
 import { PhraseStore, buildPermalink, syncUrl } from './core/phrases.js';
-import { studio } from './core/studio.js';
 import { sound } from './core/audio.js';
 import { mountFallbackInstrument } from './core/fallback.js';
+
+let webglAvailable;
+function supportsWebGL() {
+  if (webglAvailable === undefined) {
+    try {
+      const gl = document.createElement('canvas').getContext('webgl2');
+      webglAvailable = Boolean(gl);
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    } catch { webglAvailable = false; }
+  }
+  return webglAvailable;
+}
 
 const $ = (id) => document.getElementById(id);
 
@@ -15,7 +26,7 @@ function getFallbackReason() {
   const forced = params.get('fallback');
   if (forced === 'no-webgl') return 'no-webgl';
   if (forced === 'reduced-motion') return 'reduced-motion';
-  if (!studio.checkWebGLSupport()) return 'no-webgl';
+  if (new URLSearchParams(location.search).get('fallback') === 'no-webgl' || !supportsWebGL()) return 'no-webgl';
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     return 'reduced-motion';
   }
@@ -86,6 +97,7 @@ class FeedApp {
       this.fallbackReason = reason;
       for (const slot of this.instances.values()) {
         slot.api?.dispose?.();
+        if (slot.legend) slot.legend.textContent = '';
         slot.host.remove();
         slot.slideObj.frame.classList.remove('is-ready');
       }
@@ -196,6 +208,7 @@ class FeedApp {
             <div class="poster-loading">Loading</div>
           </div>
           <div class="poster-caption">
+            <span class="small-print-transcript"></span>
             <div class="caption-left">
               <span class="caption-num">${entry.number}</span>
               <span class="caption-title">${entry.title}</span>
@@ -265,7 +278,7 @@ class FeedApp {
 
     try {
       this.sizeCanvasForSlide(slot.slideObj);
-      const [mod] = await Promise.all([import(entry.modulePath), studio.prepareLighting()]);
+      const mod = await import(entry.modulePath);
       // If unloaded while importing, abort cleanly
       if (this.instances.get(idx) !== slot) return;
 
@@ -293,9 +306,7 @@ class FeedApp {
       if (this.phraseStore.getState().text !== mountPhrase) api.setPhrase(this.phraseStore.getState());
       slot.api = api;
       if (api.readLegend) {
-        slot.legend = document.createElement('span');
-        slot.legend.className = 'small-print-transcript';
-        host.appendChild(slot.legend);
+        slot.legend = slideObj.el.querySelector('.small-print-transcript');
       }
       slot.state = 'ready';
       slideObj.frame.classList.add('is-ready');
@@ -331,6 +342,7 @@ class FeedApp {
     for (const [idx, slot] of this.instances.entries()) {
       if (Math.abs(idx - this.activeIndex) > 1) {
         slot.api?.dispose?.();
+        if (slot.legend) slot.legend.textContent = '';
         slot.host.remove();
         this.instances.delete(idx);
         slot.slideObj.frame.classList.remove('is-ready');
