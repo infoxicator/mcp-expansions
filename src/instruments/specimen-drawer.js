@@ -167,15 +167,45 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   // State machine
   let currentState = phraseStore.getState();
   let activeBay = 2; // Center live specimen 03 at rest
-  const bayLifts = [0, 0, startSettled ? 1 : 1, 0, 0];
-  let autoStepTimer = -1;
+  const bayLifts = [0, 0, 1, 0, 0];
+
   let readoutDirty = true;
+
+  // The reader repeats the tiny collar readout at a legible bench scale.
+  const collarFace = document.createElement('canvas');
+  collarFace.width = 420;
+  collarFace.height = 168;
+  const collarInk = collarFace.getContext('2d');
+  const collarTex = new THREE.CanvasTexture(collarFace);
+  collarTex.colorSpace = THREE.SRGBColorSpace;
+  collarTex.anisotropy = 8;
+  const windowSize = new THREE.PlaneGeometry(.50, .24);
+  const windowMaterial = new THREE.MeshBasicMaterial({ map: collarTex });
+  const windows = specimenRoots.map(root => {
+    const face = new THREE.Mesh(windowSize, windowMaterial);
+    face.rotation.x = -Math.PI / 2;
+    face.position.set(.024, .486, 0);
+    root.add(face);
+    return face;
+  });
+  root.traverse(obj => {
+    if (/^Spec[0-4]_Led/.test(obj.name)) obj.position.x -= .29;
+  });
 
   function drawReadout() {
     const ctx = rctx;
     const w = readCanvas.width;
     const h = readCanvas.height;
     const isLive = SPECIMEN_LIVE[activeBay];
+    windows.forEach((face, i) => { face.visible = isLive && i === activeBay; });
+    collarInk.fillStyle = '#141613';
+    collarInk.fillRect(0, 0, 420, 168);
+    collarInk.fillStyle = '#f4dfa6';
+    collarInk.font = '500 48px monospace';
+    collarInk.textBaseline = 'middle';
+    currentState.cleanWords.forEach((word, i) => collarInk.fillText(word.toUpperCase(), 16, 28 + i * 54, 388));
+    collarTex.needsUpdate = true;
+    canvas.setAttribute('aria-label', isLive ? currentState.text : 'Charge-only cable');
 
     ctx.fillStyle = '#060709';
     ctx.fillRect(0, 0, w, h);
@@ -273,8 +303,6 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
         currentState = phraseStore.getState();
       }
       sound.playRelayTick(1.18 + activeBay * 0.06, 0.18);
-    } else {
-      sound.playUsbUnplug();
     }
     readoutDirty = true;
   }
@@ -282,12 +310,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   function probeNextSpecimen() {
     const nextIdx = (activeBay + 1) % 5;
     selectBay(nextIdx, { advancePhrase: true });
-    // If Space landed on a charge-only dud, briefly show it dark & silent then auto-advance to the next live cable
-    if (!SPECIMEN_LIVE[nextIdx]) {
-      autoStepTimer = 0.36;
-    } else {
-      autoStepTimer = -1;
-    }
+
   }
 
   const raycaster = new THREE.Raycaster();
@@ -300,7 +323,6 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     pointerNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointerNdc, camera);
     const hits = raycaster.intersectObjects(bayHits, false);
-    autoStepTimer = -1;
     if (hits.length) {
       const bay = hits[0].object.userData.bayIndex;
       selectBay(bay, { advancePhrase: true });
@@ -315,14 +337,6 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   let currentTheme = theme;
 
   function stepAnimation(dt) {
-    if (autoStepTimer >= 0) {
-      autoStepTimer -= dt;
-      if (autoStepTimer <= 0) {
-        autoStepTimer = -1;
-        selectBay((activeBay + 1) % 5, { advancePhrase: true });
-      }
-    }
-
     const follow = 1 - Math.exp(-12 * dt);
     for (let i = 0; i < 5; i++) {
       const isSelected = i === activeBay;
@@ -367,8 +381,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     },
 
     setSettled(settled) {
-      autoStepTimer = -1;
-      activeBay = 2;
+        activeBay = 2;
       for (let i = 0; i < 5; i++) bayLifts[i] = i === activeBay && settled ? 1.0 : 0.0;
       readoutDirty = true;
     },
@@ -391,6 +404,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       canvas.removeEventListener('click', onClick);
       headerTex.dispose();
       readTex.dispose();
+      collarTex.dispose();
       scene.userData.plates.light.dispose();
       scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {
