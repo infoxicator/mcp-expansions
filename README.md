@@ -1,71 +1,81 @@
-# MCP Expansions — Twelve Physical Instruments
+<div align="center">
+  <img src="assets/brand/mcp-favicon.svg" alt="MCP" width="52" height="52" />
+  <h1>MCP Expansions</h1>
+  <p><strong>Happy 2nd Birthday, MCP</strong> — November 25, 2024 → November 25, 2026 🎂</p>
+  <p>
+    Twelve tactile, clickable little toys celebrating two years of Model Context Protocol — and 85 completely unofficial things <strong>MCP</strong> actually stands for.
+  </p>
+</div>
 
-Twelve interactive square posters for MCP’s second birthday. Each instrument performs one of the 85 phrases in `phrases.json`. Scroll to the next poster or share a phrase and instrument together.
+<p align="center">
+  <a href="proof/final/mcp-birthday-showcase.mp4">
+    <img src="docs/screenshots/mcp-birthday-showcase.gif" alt="Happy Birthday MCP — 12-instrument interactive showcase" width="540" />
+  </a>
+  <br />
+  <sub>
+    🎬 <a href="proof/final/mcp-birthday-showcase.mp4"><strong>Watch the full 1080×1080 60fps showcase video (MP4)</strong></a>
+  </sub>
+</p>
 
-## The Twelve Instruments
+---
 
-| # | ID | Instrument | Interaction |
-|---|---|---|---|
-| 01 | `newton-protocol` | **Newton Protocol** | Tap the poster or pull the `M` sphere to set the cradle in motion |
-| 02 | `the-contract` | **The Contract** | Plug in the USB-C cable (`5V → 9V → 15V → 20V`) to negotiate and lock a phrase |
-| 03 | `cipher-machine` | **Cipher Machine** | Turn the brass rotors or press `Space` to stamp a fresh paper tape |
-| 04 | `discover-identity` | **Discover Identity** | Seat the VCONN cable to wake the `SOP / SOP' / SOP''` e-marker chips |
-| 05 | `destination-blind` | **Destination Blind** | Click the Solari split-flap board or press `Space` to roll all three rows |
-| 06 | `letterpress-lockup` | **Letterpress Lockup** | Pull a fresh debossed archival proof sheet from the brass-quoined iron chase |
-| 07 | `dymo-embosser` | **Dymo Embosser** | Squeeze the trigger wheel to emboss a phrase on one length of black vinyl |
-| 08 | `combination-lock` | **Combination Lock** | Spin the three coaxial word tumblers to dial a new phrase and pop the chrome shackle |
-| 09 | `mechanical-typewriter` | **Mechanical Typewriter** | Strike the `M`, `C`, `P` keys to clack a fresh phrase onto archival cotton bond paper |
-| 10 | `flip-contract` | **Flip Contract** | Flip the USB-C plug 180° (`CC1` ↔ `CC2`) to negotiate a new orientation contract |
-| 11 | `jacket-legend` | **Jacket Legend** | Pull the USB-C jacket taut to read its jacket legend and power ratings |
-| 12 | `specimen-drawer` | **Specimen Drawer** | Select a specimen in the three-bay oak archive drawer |
+## Wait, what does MCP stand for?
 
-## Controls & Permalinks
+Depending on the time of day, it might be:
 
-- **Navigate feed**: Mouse wheel, trackpad swipe, touch swipe, `↑` / `↓`, or `j` / `k`. Each landing draws a fresh phrase from the same shuffled deck as clicks.
-- **Jump to an instrument**: Use the right-hand rail. Hover, drag, or focus a tick to preview it, then select the tick or preview to jump.
-- **Operate instrument**: Click the poster or press `Space` for a fresh phrase. `Shift+Space` replays the current phrase. The deck uses all 85 phrases before starting another cycle.
-- **Index drawer**: `/` to search and filter all 85 entries in `phrases.json` (`Birthday`, `Protocol`, `Dev`, `Absurd`, `Skeptic`)
-- **Theme**: `T` toggles light and dark themes
-- **Deep links**:
-  - `?i=<instrument-id>` — jump directly to any instrument (e.g. `?i=combination-lock`)
-  - `?p=<phrase-slug>` — load any curated phrase (e.g. `?p=more-cake-please`)
-  - `?w=M,C,P` — custom three-word remix (e.g. `?w=Modern,Coffee,Protocol`)
-- **Accessibility**: `prefers-reduced-motion: reduce` and no-WebGL environments render crisp typographic SVG still plates that preserve all permalinks and keyboard navigation.
+- **More Cake, Please** — *Official birthday transport specification for November 25.*
+- **Manual Copy Paste** — *The original zero-dependency context integration layer.*
+- **Mostly Context Problems** — *Ninety percent of debugging, distilled into three words.*
+- **Mandatory Coffee Protocol** — *Handshake must complete before any 9:00 AM standup.*
+- **Make Claude Proud** — *Aspirational system prompt, rarely verified in staging.*
+- **Mischievous Capybara Parliament** — *Unanimously ratified in serene hot-spring silence.*
+- **Majestic Croissant Physics** — *Flaky by design, unexpectedly buttery in production.*
 
-## Architecture & Static Hosting
+…plus 78 more in [`phrases.json`](phrases.json).
 
-The site is a set of static ES modules. The current poster and its immediate neighbours load on approach. At rest the feed retains the last rendered frame. A photo plate supplies the working surface and hardware of each instrument. The renderer registers moving parts, light emitters and live type in the same coordinate space. Newton suspends the M sphere on a single wire and integrates the photographed steel along the pendulum’s path for shutter blur. Its impulse solver drives the word reveals and audible impacts.
+---
 
-The photographic plates in `assets/photographs/` were made with ImageGen. The Blender sources, compressed meshes, lighting probes and previous render plates are retained in `blender/` and `assets/`. The locally served fonts and their OFL licences are in `assets/fonts/`.
+## All Twelve Instruments
 
-### Local Preview
+Every instrument is a little physical object you can poke, drag, flip, pull, dial, or clack to deal a fresh MCP expansion:
+
+![All twelve MCP instruments](docs/screenshots/gallery-12.jpg)
+
+---
+
+## A Peek at the Site
+
+Scroll through the gallery one quiet object at a time — or hover the tick rail on the right to jump straight to your favorite:
+
+![Mechanical Typewriter — More Cake, Please](docs/screenshots/site-typewriter.png)
+
+| | |
+| :---: | :---: |
+| ![Dymo Embosser with instrument preview rail](docs/screenshots/site-dymo.png) | ![The Contract — Manual Copy Paste](docs/screenshots/site-contract.png) |
+
+---
+
+## Play With It
+
+- **Operate any instrument:** Click, drag, or press `Space` for a fresh expansion (`Shift+Space` replays the current one)
+- **Browse the collection:** Scroll, press `j` / `k` (or `↑` / `↓`), or hover and click the tick rail on the right
+- **Explore all 85 phrases:** Press `/` to search and filter by mood (*Birthday*, *Protocol*, *Dev*, *Absurd*, *Skeptic*)
+- **Lights out:** Press `T` to switch between light and dark mode
+- **Make your own:** Add `?w=Modern,Coffee,Protocol` to the URL to render any three M · C · P words on any instrument
+
+Want to spin it up locally?
 
 ```bash
-python3 -m http.server 8000 --bind 127.0.0.1
+python3 -m http.server 8000
 ```
 
-### Browser verification
+Then open [http://localhost:8000](http://localhost:8000) and start clacking.
 
-Run `npm test` to start a temporary loopback server and exercise the live mechanisms, snap navigation, phrase links and motion preference. The two capture scripts start their own loopback server. They use the project’s Playwright dependency, local Chrome, FFmpeg and ImageMagick.
+---
 
-```sh
-node scripts/capture_phase1.mjs
-node scripts/capture_final.mjs
-```
+## Got a better M · C · P?
 
-### Proof Artifacts
-
-- `proof/phase1/phase1-demo.mp4` records the cradle, touch swipe, meter negotiation and replug with instrument audio.
-- `proof/phase1/` also contains both instruments at rest in both themes, alternate phrases and the reduced-motion plate.
-
-- `proof/final/contact-sheet.png` — 4×3 contact sheet of 1080×1080 stills for all 12 instruments at rest on `"More Cake, Please"`
-- `proof/final/stills/` — individual 1080×1080 browser captures (`01-newton-protocol.png` … `12-mechanical-typewriter.png`)
-- `proof/final/full-feed-demo.mp4` — all twelve instruments operated in sequence. The capture checks multiple pixel transitions in each instrument’s hardware region in the encoded film.
-- `proof/final/review/` contains the 540px still JPEGs. Each movie has a matching `*-filmstrip.jpg` and `*-frames-540.jpg`, sampled from its recorded timeline.
-
-## Contributing a Phrase
-
-Add a new entry to `phrases.json` following the M · C · P format:
+Drop your favorite three-word expansion into [`phrases.json`](phrases.json) and open a PR:
 
 ```json
 {
@@ -75,3 +85,10 @@ Add a new entry to `phrases.json` following the M · C · P format:
   "category": "birthday"
 }
 ```
+
+---
+
+<p align="center">
+  <strong>Happy 2nd Birthday, MCP.</strong><br />
+  <sub>Here’s to more context — and definitely more cake.</sub>
+</p>
