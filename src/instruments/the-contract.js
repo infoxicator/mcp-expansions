@@ -30,18 +30,17 @@ function displayPixels(lines) {
   }
   return glass;
 }
-export async function createInstrument({canvas, phraseStore, startSettled}) {
+export async function createInstrument({canvas, phraseStore, startSettled, canOperate = () => true}) {
   const plate = await photograph(canvas,'the-contract');
   const {ctx,crop} = plate;
-  let seated = startSettled, hasContract = startSettled;
+  let seated = startSettled;
   let offset = seated ? 0 : 120, velocity = 0;
   let started = null, dirty = true, drag = null;
+  let replugDelay = 0;
   let status, pixels;
   function plug() {
     if (seated) return;
     seated = true;
-    if (hasContract) phraseStore.nextRandom({source:'the-contract'});
-    hasContract = true;
     started = performance.now();
     sound.playUsbPlug();
     dirty = true;
@@ -53,35 +52,62 @@ export async function createInstrument({canvas, phraseStore, startSettled}) {
     sound.playUsbUnplug();
     dirty = true;
   }
-  function toggle() { seated ? unplug() : plug(); }
+  function operate(replay = false) {
+    if (!replay) phraseStore.nextRandom({source:'the-contract'});
+    replugDelay = 0;
+    if (seated) {
+      unplug();
+      replugDelay = .4;
+    } else {
+      plug();
+    }
+  }
   const controller = new AbortController();
   const listen = (event,cb) => canvas.addEventListener(event,cb,{signal:controller.signal});
-  canvas.style.cursor = 'grab';
+  canvas.style.cursor = 'pointer';
   listen('pointerdown', e => {
     const rect = canvas.getBoundingClientRect();
-    if (!e.isPrimary || e.button !== 0 || (e.clientX-rect.left)/rect.width < .45) return;
-    drag = {x:e.clientX, offset, moved:false, snapped:false};
+    if (!e.isPrimary || e.button !== 0 || !canOperate()) return;
+    drag = {
+      x:e.clientX, y:e.clientY, offset, moved:false, snapped:false,
+      canDrag:(e.clientX-rect.left)/rect.width >= .45,
+    };
     canvas.setPointerCapture(e.pointerId);
-    canvas.style.cursor='grabbing';
   });
   listen('pointermove', e => {
-    if (!drag || drag.snapped) return;
-    const dx=(e.clientX-drag.x)/canvas.clientWidth*1000;
-    if (Math.abs(dx) < 7 && !drag.moved) return;
-    drag.moved = true;
+    if (!drag?.canDrag || drag.snapped) return;
+    const pixels=e.clientX-drag.x;
+    if (!drag.moved) {
+      if (Math.abs(pixels) < Math.max(7, Math.abs(e.clientY-drag.y))) return;
+      replugDelay=0;
+      drag.moved=true;
+      canvas.style.cursor='grabbing';
+    }
+    const dx=pixels/canvas.clientWidth*1000;
     offset = clamp(drag.offset+dx,0,135);
     if (seated && offset>38) unplug();
-    if (!seated && offset < 22) { plug(); drag.snapped=true; }
+    if (!seated && offset < 22) {
+      phraseStore.nextRandom({source:'the-contract'});
+      plug();
+      drag.snapped=true;
+    }
   });
   function release(e) {
     if (!drag) return;
-    if (e.type !== 'pointercancel' && !drag.snapped) {
-      if (!drag.moved) toggle();
-      else if (offset<55) plug();
-      else unplug();
+    if (e.type !== 'pointercancel' && !drag.snapped && canOperate()) {
+      if (!drag.moved) {
+        if (Math.hypot(e.clientX-drag.x,e.clientY-drag.y) <= 12) operate();
+      } else if (offset<55) {
+        if (!seated) {
+          phraseStore.nextRandom({source:'the-contract'});
+          plug();
+        }
+      } else {
+        unplug();
+      }
     }
     drag=null;
-    canvas.style.cursor='grab';
+    canvas.style.cursor='pointer';
   }
   listen('pointerup',release);
   listen('pointercancel',release);
@@ -118,7 +144,11 @@ export async function createInstrument({canvas, phraseStore, startSettled}) {
   }
 
   function draw(dt) {
-    if (!drag || drag.snapped) {
+    if (replugDelay > 0) {
+      replugDelay -= dt;
+      if (replugDelay <= 0) plug();
+    }
+    if (!drag?.moved || drag.snapped) {
       const goal = seated ? 0 : 120;
       const h = Math.min(.025,dt);
       velocity += ((goal-offset)*340-velocity*28)*h;
@@ -174,11 +204,11 @@ export async function createInstrument({canvas, phraseStore, startSettled}) {
     dirty=false;
   }
   return {
-    render:draw, triggerPrimary:toggle, setTheme(){},
+    render:draw, triggerPrimary:opts=>operate(opts?.replay), playOnArrival:()=>operate(true), setTheme(){},
     setPhrase(){ dirty=true; }, setSettled(value){
-      seated=hasContract=value; offset=value?0:120; started=null; velocity=0; dirty=true;
+      replugDelay=0; seated=value; offset=value?0:120; started=null; velocity=0; dirty=true;
     },
-    isMoving:()=>dirty || !!drag || started !== null || offset !== (seated?0:120),
+    isMoving:()=>replugDelay > 0 || dirty || !!drag || started !== null || offset !== (seated?0:120),
     dispose(){controller.abort();}
   };
 }

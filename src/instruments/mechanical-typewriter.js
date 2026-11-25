@@ -1,12 +1,13 @@
-import { mechanism, clamp, paperInk } from '../core/photograph.js';
+import { mechanism } from 'mcp-mechanism';
+import { clamp, paperInk } from '../core/photograph.js';
 import { sound } from '../core/audio.js';
 
-export const createInstrument=mechanism('mechanical-typewriter',({ctx,crop,next,image})=>{
+export const createInstrument=mechanism('mechanical-typewriter',({ctx,crop,image})=>{
   const ribbon=paperInk(ctx,image,.32,.07,[28,26,32],18);
   let last=0;
   return {
     duration:1.8,
-    start(){next();last=0;},
+    start(){last=0;},
     step(t,p,phrase){
       const n=Math.floor(clamp(t/.86)*phrase.text.length);
       if(n!==last) {sound.playMechanicalDetent(.88+n%4*.04,.19);last=n;}

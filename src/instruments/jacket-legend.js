@@ -1,7 +1,7 @@
 import { photograph, clamp, paperInk } from '../core/photograph.js';
 import { sound } from '../core/audio.js';
 
-export async function createInstrument({canvas,phraseStore}) {
+export async function createInstrument({canvas,phraseStore,canOperate = () => true}) {
   const {ctx,begin,crop,image}=await photograph(canvas,'jacket-legend');
   const pigment=paperInk(ctx,image,.12,.836,[49,48,43],5);
   // Prepare the felt revealed by the moving lead from the bare centre of
@@ -33,44 +33,53 @@ export async function createInstrument({canvas,phraseStore}) {
   let tension=1, target=1, velocity=0, cycle=false, drag=null, dirty=true;
   const events=new AbortController();
   const on=(event,cb)=>canvas.addEventListener(event,cb,{signal:events.signal});
-  const next=()=>{phraseStore.nextRandom({source:'jacket-legend'});sound.playUsbPlug();};
+  const advance=()=>phraseStore.nextRandom({source:'jacket-legend'});
   on('pointerdown',e=>{
-    if (!e.isPrimary || e.button!==0) return;
-    drag={x:e.clientX,y:e.clientY,initial:tension};
-    cycle=false; velocity=0;
+    if (!e.isPrimary || e.button!==0 || !canOperate()) return;
+    drag={x:e.clientX,y:e.clientY,initial:tension,moved:false};
     canvas.setPointerCapture(e.pointerId);
   });
   on('pointermove',e=>{
     if (!drag) return;
-    tension=clamp(drag.initial+(e.clientX-drag.x)/canvas.clientWidth*2.4);
+    const dx=e.clientX-drag.x;
+    if (!drag.moved) {
+      if (Math.abs(dx)<Math.max(7,Math.abs(e.clientY-drag.y))) return;
+      drag.moved=true;
+      cycle=false;
+      velocity=0;
+    }
+    tension=clamp(drag.initial+dx/canvas.clientWidth*2.4);
     dirty=true;
   });
   on('pointerup',e=>{
     if (!drag) return;
     const dx=e.clientX-drag.x;
-    if (Math.abs(dx)<7) {
-      if (Math.abs(e.clientY-drag.y)<10) trigger();
-    } else {
-      target=dx>0?1:0;
-      if (target===1 && drag.initial<.5) next();
+    if (canOperate()) {
+      if (!drag.moved) {
+        if (Math.hypot(dx,e.clientY-drag.y)<=12) trigger();
+      } else {
+        target=dx>0?1:0;
+        if (target===1 && drag.initial<.5) {advance();sound.playUsbPlug();}
+      }
     }
     drag=null;dirty=true;
   });
   on('pointercancel',()=>{ drag=null; dirty=true; });
-  function trigger() {
-    if (tension<.02) {next();target=1;}
+  function trigger(replay=false) {
+    if (!replay) advance();
+    if (tension<.02) {cycle=false;target=1;sound.playUsbPlug();}
     else {target=0;cycle=true;}
     dirty=true;
   }
   canvas.style.cursor='ew-resize';
   function draw(dt) {
-    if (!drag) {
+    if (!drag?.moved) {
       const h=Math.min(dt,.03);
       velocity+=((target-tension)*145-velocity*22)*h;
       tension=clamp(tension+velocity*h);
       if (Math.abs(target-tension)<.006 && Math.abs(velocity)<.09) {
         tension=target;velocity=0;
-        if (cycle && target===0) {cycle=false;next();target=1;}
+        if (cycle && target===0) {cycle=false;sound.playUsbPlug();target=1;}
       }
     }
     begin();
@@ -122,7 +131,7 @@ export async function createInstrument({canvas,phraseStore}) {
     ctx.restore(); dirty=false;
     canvas.setAttribute('aria-label',text);
   }
-  return { render:draw,triggerPrimary:trigger,setPhrase(){dirty=true;},setTheme(){},
+  return { render:draw,triggerPrimary:opts=>trigger(opts?.replay),playOnArrival:()=>trigger(true),setPhrase(){dirty=true;},setTheme(){},
     setSettled(s){target=tension=s?1:0;velocity=0;cycle=false;dirty=true;},
     readLegend:()=>tension>.98 ? phraseStore.getState().text : '',
     isMoving:()=>dirty||cycle||!!drag||Math.abs(tension-target)>.001,

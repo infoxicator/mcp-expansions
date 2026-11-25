@@ -6,23 +6,24 @@ Twelve interactive square posters for MCP’s second birthday. Each instrument p
 
 | # | ID | Instrument | Interaction |
 |---|---|---|---|
-| 01 | `newton-protocol` | **Newton Protocol** | Tap the `M` sphere to replay, pull harder for a new phrase, or use `Space` |
+| 01 | `newton-protocol` | **Newton Protocol** | Tap the poster or pull the `M` sphere to set the cradle in motion |
 | 02 | `the-contract` | **The Contract** | Plug in the USB-C cable (`5V → 9V → 15V → 20V`) to negotiate and lock a phrase |
 | 03 | `cipher-machine` | **Cipher Machine** | Turn the brass rotors or press `Space` to stamp a fresh paper tape |
-| 04 | `jacket-legend` | **Jacket Legend** | Pull the USB-C jacket taut to read its jacket legend and power ratings |
-| 05 | `discover-identity` | **Discover Identity** | Seat the VCONN cable to wake the `SOP / SOP' / SOP''` e-marker chips |
-| 06 | `flip-contract` | **Flip Contract** | Flip the USB-C plug 180° (`CC1` ↔ `CC2`) to negotiate a new orientation contract |
-| 07 | `specimen-drawer` | **Specimen Drawer** | Select a specimen in the three-bay oak archive drawer |
-| 08 | `destination-blind` | **Destination Blind** | Click the Solari split-flap board or press `Space` to roll all three rows |
-| 09 | `letterpress-lockup` | **Letterpress Lockup** | Pull a fresh debossed archival proof sheet from the brass-quoined iron chase |
-| 10 | `dymo-embosser` | **Dymo Embosser** | Squeeze the trigger wheel to emboss a phrase on one length of black vinyl |
-| 11 | `combination-lock` | **Combination Lock** | Spin the three coaxial word tumblers to dial a new phrase and pop the chrome shackle |
-| 12 | `mechanical-typewriter` | **Mechanical Typewriter** | Strike the `M`, `C`, `P` keys to clack a fresh phrase onto archival cotton bond paper |
+| 04 | `discover-identity` | **Discover Identity** | Seat the VCONN cable to wake the `SOP / SOP' / SOP''` e-marker chips |
+| 05 | `destination-blind` | **Destination Blind** | Click the Solari split-flap board or press `Space` to roll all three rows |
+| 06 | `letterpress-lockup` | **Letterpress Lockup** | Pull a fresh debossed archival proof sheet from the brass-quoined iron chase |
+| 07 | `dymo-embosser` | **Dymo Embosser** | Squeeze the trigger wheel to emboss a phrase on one length of black vinyl |
+| 08 | `combination-lock` | **Combination Lock** | Spin the three coaxial word tumblers to dial a new phrase and pop the chrome shackle |
+| 09 | `mechanical-typewriter` | **Mechanical Typewriter** | Strike the `M`, `C`, `P` keys to clack a fresh phrase onto archival cotton bond paper |
+| 10 | `flip-contract` | **Flip Contract** | Flip the USB-C plug 180° (`CC1` ↔ `CC2`) to negotiate a new orientation contract |
+| 11 | `jacket-legend` | **Jacket Legend** | Pull the USB-C jacket taut to read its jacket legend and power ratings |
+| 12 | `specimen-drawer` | **Specimen Drawer** | Select a specimen in the three-bay oak archive drawer |
 
 ## Controls & Permalinks
 
-- **Navigate feed**: Mouse wheel, trackpad swipe, touch swipe, `↑` / `↓`, or `j` / `k`
-- **Operate instrument**: Direct click/drag on the hardware or `Space`
+- **Navigate feed**: Mouse wheel, trackpad swipe, touch swipe, `↑` / `↓`, or `j` / `k`. Each landing draws a fresh phrase from the same shuffled deck as clicks.
+- **Jump to an instrument**: Use the right-hand rail. Hover, drag, or focus a tick to preview it, then select the tick or preview to jump.
+- **Operate instrument**: Click the poster or press `Space` for a fresh phrase. `Shift+Space` replays the current phrase. The deck uses all 85 phrases before starting another cycle.
 - **Index drawer**: `/` to search and filter all 85 entries in `phrases.json` (`Birthday`, `Protocol`, `Dev`, `Absurd`, `Skeptic`)
 - **Theme**: `T` toggles light and dark themes
 - **Deep links**:

@@ -13,21 +13,6 @@ const FINAL_DIR = path.join(ROOT, 'proof', 'final');
 const STILLS_DIR = path.join(FINAL_DIR, 'stills');
 fs.mkdirSync(STILLS_DIR, { recursive: true });
 
-const INSTRUMENTS = [
-  { id: 'newton-protocol', number: '01', title: 'Newton Protocol' },
-  { id: 'the-contract', number: '02', title: 'The Contract' },
-  { id: 'cipher-machine', number: '03', title: 'Cipher Machine' },
-  { id: 'jacket-legend', number: '04', title: 'Jacket Legend' },
-  { id: 'discover-identity', number: '05', title: 'Discover Identity' },
-  { id: 'flip-contract', number: '06', title: 'Flip Contract' },
-  { id: 'specimen-drawer', number: '07', title: 'Specimen Drawer' },
-  { id: 'destination-blind', number: '08', title: 'Destination Blind' },
-  { id: 'letterpress-lockup', number: '09', title: 'Letterpress Lockup' },
-  { id: 'dymo-embosser', number: '10', title: 'Dymo Embosser' },
-  { id: 'combination-lock', number: '11', title: 'Combination Lock' },
-  { id: 'mechanical-typewriter', number: '12', title: 'Mechanical Typewriter' },
-];
-
 async function waitReady(page, idx) {
   await page.waitForFunction(
     (i) => window.__MCP_FEED__ && window.__MCP_FEED__.isReady(i),
@@ -72,6 +57,8 @@ async function main() {
     if (totalBytes >= 5 * 1024 * 1024) {
       errors.push(`First-paint payload exceeded 5 MB: ${totalBytes} bytes`);
     }
+    const instruments = await budgetPage.evaluate(() => window.__MCP_FEED__.instruments);
+    const indexOf = id => instruments.findIndex(instrument => instrument.id === id);
     await budgetCtx.close();
 
     // ── 2. Capture 1080x1080 at-rest stills on "More Cake, Please" for ALL 12 instruments ──
@@ -86,8 +73,8 @@ async function main() {
     page.on('pageerror', (err) => errors.push(`still pageerror: ${err.message}`));
 
     const stillPaths = [];
-    for (let idx = 0; idx < INSTRUMENTS.length; idx++) {
-      const inst = INSTRUMENTS[idx];
+    for (let idx = 0; idx < instruments.length; idx++) {
+      const inst = instruments[idx];
       const outPath = path.join(STILLS_DIR, `${inst.number}-${inst.id}.png`);
       await page.goto(
         `${baseUrl}/?i=${inst.id}&p=more-cake-please&poster=1&theme=light&settled=1`,
@@ -108,14 +95,14 @@ async function main() {
 
     // Quick verification of dark mode, reduced-motion fallback, custom ?w=, and `/` Index drawer
     await page.goto(`${baseUrl}/?i=mechanical-typewriter&p=more-cake-please&poster=1&theme=dark&settled=1`, { waitUntil: 'networkidle' });
-    await waitReady(page, 11);
+    await waitReady(page, indexOf('mechanical-typewriter'));
     await page.waitForTimeout(180);
 
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(`${baseUrl}/?i=combination-lock&w=Modern,Coffee,Protocol&theme=light`, { waitUntil: 'networkidle' });
-    await waitReady(page, 10);
-    const fallbackText = await page.locator('[data-poster-index="10"] .fallback-words').innerText();
-    assert.deepEqual(await page.locator('[data-poster-index="10"] .fallback-word').allTextContents(), ['Modern','Coffee','Protocol']);
+    await waitReady(page, indexOf('combination-lock'));
+    const fallbackText = await page.locator('[data-id="combination-lock"] .fallback-words').innerText();
+    assert.deepEqual(await page.locator('[data-id="combination-lock"] .fallback-word').allTextContents(), ['Modern','Coffee','Protocol']);
     console.log('Verified reduced-motion + ?w= fallback:', fallbackText.replace(/\s+/g, ' '));
     await page.emulateMedia({ reducedMotion: 'no-preference' });
 
@@ -272,7 +259,7 @@ async function main() {
     });
     recPage.on('pageerror', (err) => errors.push(`rec pageerror: ${err.message}`));
 
-    await recPage.goto(`${baseUrl}/?i=newton-protocol&p=more-cake-please&theme=light`, { waitUntil: 'networkidle' });
+    await recPage.goto(`${baseUrl}/?i=newton-protocol&p=more-cake-please&theme=light&intro=0`, { waitUntil: 'networkidle' });
     await waitReady(recPage, 0);
     await waitReady(recPage, 1);
 
@@ -302,7 +289,7 @@ async function main() {
 
     const segments=[];
     const clock=()=>(performance.now()-t0)/1000;
-    for (let idx=0; idx<INSTRUMENTS.length; idx++) {
+    for (let idx=0; idx<instruments.length; idx++) {
       if (idx) await swipeNext(recPage,cdp,idx);
       await waitReady(recPage,idx);
       const frame=recPage.locator('[data-poster-index="'+idx+'"] canvas');
@@ -310,13 +297,15 @@ async function main() {
       const poster=await frame.boundingBox();
       await recPage.waitForTimeout(260);
       const start=clock();
-      if (idx===1 || idx===6) {
+      const id=instruments[idx].id;
+      if (id==='the-contract' || id==='specimen-drawer') {
         // Seat the free plug / select the third (live) specimen by hand.
-        await frame.click({position:{x:poster.width*(idx===1?.88:.40),y:poster.height*(idx===1?.50:.63)}});
+        const [x,y]=id==='the-contract' ? [.88,.50] : [.40,.63];
+        await frame.click({position:{x:poster.width*x,y:poster.height*y}});
       } else {
         await recPage.keyboard.press('Space');
       }
-      if (idx===0) {
+      if (id==='newton-protocol') {
         await recPage.waitForFunction(()=>document.querySelectorAll('.newton-word.is-revealed').length===0);
         await recPage.waitForFunction(()=>document.querySelectorAll('.newton-word.is-revealed').length===3);
       } else {
@@ -352,11 +341,20 @@ async function main() {
     ], { stdio: 'inherit' });
 
     // Measure moving hardware inside each stationary poster in the finished MP4.
-    const regions=[
-      [0,.12,1,.44],[.81,.43,.19,.15],[.30,.17,.41,.14],[.05,.76,.91,.19],
-      [0,.105,.083,.095],[.11,.24,.72,.45],[.07,.08,.85,.65],[.08,.06,.84,.88],
-      [.17,.09,.65,.27],[.20,.26,.43,.43],[.21,.40,.58,.46],[.43,.39,.14,.28]
-    ];
+    const regions={
+      'newton-protocol':[0,.12,1,.44],
+      'the-contract':[.81,.43,.19,.15],
+      'cipher-machine':[.30,.17,.41,.14],
+      'jacket-legend':[.05,.76,.91,.19],
+      'discover-identity':[0,.105,.083,.095],
+      'flip-contract':[.11,.24,.72,.45],
+      'specimen-drawer':[.07,.08,.85,.65],
+      'destination-blind':[.08,.06,.84,.88],
+      'letterpress-lockup':[.17,.09,.65,.27],
+      'dymo-embosser':[.20,.26,.43,.43],
+      'combination-lock':[.21,.40,.58,.46],
+      'mechanical-typewriter':[.43,.39,.14,.28]
+    };
     const samples=[];
     const compact=[];
     // Keep the measured edit points beside the raw frames for export retries.
@@ -364,11 +362,12 @@ async function main() {
     // Sample both sides of the stroke, with a readable pre- and post-state.
     for (const [i,{start,end,poster}] of segments.entries()) {
       const duration=end-start;
-      const name=INSTRUMENTS[i].title;
-      verifyMotion(outMp4,start-.09,duration+.18,poster,regions[i],name);
-      const times=[start-.12,start+duration*(i===1?.075:.27),start+duration*(i===5?.50:.61),end+.14];
-      compact.push(samples.length+(i===5?2:1));
-      for(const time of times) samples.push({time,label:INSTRUMENTS[i].number+'  '+name});
+      const { id, title, number }=instruments[i];
+      const flips=id==='flip-contract';
+      verifyMotion(outMp4,start-.09,duration+.18,poster,regions[id],title);
+      const times=[start-.12,start+duration*(id==='the-contract'?.075:.27),start+duration*(flips?.50:.61),end+.14];
+      compact.push(samples.length+(flips?2:1));
+      for(const time of times) samples.push({time,label:number+'  '+title});
     }
     exportStrips(outMp4,tmpFramesDir,segments[0].poster,samples,compact,'full-feed');
 

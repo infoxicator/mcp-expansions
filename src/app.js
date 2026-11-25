@@ -1,5 +1,7 @@
-import { INSTRUMENTS, findInstrumentIndex } from './registry.js';
+import { INSTRUMENTS, findInstrumentIndex } from 'mcp-registry';
 import { PhraseStore, buildPermalink, syncUrl } from './core/phrases.js';
+import { bindInstrumentRail } from './core/instrument-rail.js';
+import { bindFeedScroll } from 'mcp-feed-scroll';
 import { sound } from './core/audio.js';
 import { mountFallbackInstrument } from './core/fallback.js';
 
@@ -16,6 +18,7 @@ function supportsWebGL() {
 }
 
 const $ = (id) => document.getElementById(id);
+const appModuleUrl = new URL(import.meta.url);
 
 function pad3(n) {
   return String(n).padStart(3, '0');
@@ -26,18 +29,16 @@ function getFallbackReason() {
   const forced = params.get('fallback');
   if (forced === 'no-webgl') return 'no-webgl';
   if (forced === 'reduced-motion') return 'reduced-motion';
-  if (new URLSearchParams(location.search).get('fallback') === 'no-webgl' || !supportsWebGL()) return 'no-webgl';
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     return 'reduced-motion';
   }
-  return null;
+  return supportsWebGL() ? null : 'no-webgl';
 }
 
 class FeedApp {
   constructor() {
     this.phraseStore = new PhraseStore();
     this.slides = [];
-    this.railDots = [];
     this.instances = new Map(); // index -> { state: 'loading'|'ready', api, canvas, frame }
     this.activeIndex = 0;
     this.initialInstrumentId = null;
@@ -47,17 +48,13 @@ class FeedApp {
     this.activeCategory = 'all';
     this.searchQuery = '';
     this.lastFrameTs = null;
-    this.confirmTimers = {};
+    this.lastPlayedSlide = null;
+    this.arrivalStarted = null;
 
     this.feedEl = $('feed');
-    this.railEl = $('feedRail');
-    this.totalCountEl = $('totalCount');
-    this.themeToggle = $('themeToggle');
-    this.themeIcon = $('themeIcon');
-    this.soundToggle = $('soundToggle');
-    this.soundIcon = $('soundIcon');
-    this.soundLabel = $('soundLabel');
-    this.indexToggle = $('indexToggle');
+    this.instrumentRail = $('instrumentRail');
+    this.scrollCueMark = $('scrollCueMark');
+    this.actionStatus = $('actionStatus');
     this.indexDrawer = $('indexDrawer');
     this.drawerBackdrop = $('drawerBackdrop');
     this.drawerClose = $('drawerClose');
@@ -65,7 +62,6 @@ class FeedApp {
     this.drawerShowing = $('drawerShowing');
     this.searchInput = $('searchInput');
     this.filterPills = Array.from(document.querySelectorAll('.filter-pill'));
-    this.brandLink = $('brandLink');
   }
 
   async boot() {
@@ -88,8 +84,9 @@ class FeedApp {
     this.initialInstrumentId = params.get('i');
     this.activeIndex = findInstrumentIndex(this.initialInstrumentId);
 
-    this.totalCountEl.textContent = String(this.phraseStore.phrases.length);
-    this.buildSlidesAndRail();
+    this.autoplay = params.get('poster') !== '1' &&
+      params.get('settled') !== '1' && params.get('intro') !== '0';
+    this.buildSlides();
     this.bindEvents();
     window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => {
       const reason = getFallbackReason();
@@ -112,6 +109,7 @@ class FeedApp {
 
     // Subscribe to phrase changes
     this.phraseStore.subscribe((state, meta) => {
+      if (meta.source === INSTRUMENTS[this.activeIndex].id) this.lastPlayedSlide = this.activeIndex;
       for (const slot of this.instances.values()) {
         slot.dirty = true;
         if (slot.api) slot.api.setPhrase(state, meta);
@@ -155,14 +153,6 @@ class FeedApp {
   applyTheme(nextTheme, { persist = true } = {}) {
     this.theme = nextTheme === 'dark' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', this.theme);
-    if (this.theme === 'dark') {
-      this.themeIcon.innerHTML =
-        '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
-    } else {
-      this.themeIcon.innerHTML =
-        '<circle cx="12" cy="12" r="4"></circle>' +
-        '<path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>';
-    }
     if (persist) {
       try {
         localStorage.setItem('mcp-expansions-theme', this.theme);
@@ -174,73 +164,29 @@ class FeedApp {
     }
   }
 
-  updateSoundUi() {
-    const muted = sound.isMuted();
-    this.soundToggle.setAttribute('aria-pressed', String(!muted));
-    this.soundLabel.textContent = muted ? 'Muted' : 'Sound';
-    if (muted) {
-      this.soundIcon.innerHTML =
-        '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>' +
-        '<line x1="23" y1="9" x2="17" y2="15"></line>' +
-        '<line x1="17" y1="9" x2="23" y2="15"></line>';
-    } else {
-      this.soundIcon.innerHTML =
-        '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>' +
-        '<path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>' +
-        '<path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>';
-    }
-  }
-
-  buildSlidesAndRail() {
+  buildSlides() {
     const slideFrag = document.createDocumentFragment();
-    const railFrag = document.createDocumentFragment();
 
     INSTRUMENTS.forEach((entry, idx) => {
       const slide = document.createElement('section');
       slide.className = 'slide';
       slide.dataset.index = String(idx);
       slide.dataset.id = entry.id;
-      slide.setAttribute('aria-label', `${entry.number} ${entry.title}`);
+      slide.setAttribute('aria-label', entry.title);
+      slide.setAttribute('aria-description', entry.cue);
 
       slide.innerHTML = `
         <div class="poster-column">
-          <div class="poster-frame" data-poster-index="${idx}">
-            <div class="poster-loading">Loading</div>
-          </div>
-          <div class="poster-caption">
-            <span class="small-print-transcript"></span>
-            <div class="caption-left">
-              <span class="caption-num">${entry.number}</span>
-              <span class="caption-title">${entry.title}</span>
-              <span class="caption-cue">${entry.cue}</span>
-            </div>
-            <div class="caption-actions">
-              <button type="button" class="caption-btn" data-action="copy" data-idx="${idx}">Copy</button>
-              <button type="button" class="caption-btn" data-action="link" data-idx="${idx}">Link</button>
-            </div>
-          </div>
+          <div class="poster-frame" data-poster-index="${idx}"></div>
+          <span class="small-print-transcript visually-hidden"></span>
         </div>
       `;
 
       const frame = slide.querySelector('.poster-frame');
       this.slides.push({ el: slide, frame, entry });
       slideFrag.appendChild(slide);
-
-      // Right vertical navigation rail pip
-      const dot = document.createElement('button');
-      dot.type = 'button';
-      dot.className = 'rail-dot';
-      dot.title = `${entry.number} · ${entry.title}`;
-      dot.setAttribute('aria-label', `Jump to ${entry.number} ${entry.title}`);
-      dot.setAttribute('aria-current', idx === this.activeIndex ? 'true' : 'false');
-      dot.innerHTML = '<span class="rail-pip"></span>';
-      dot.addEventListener('click', () => this.scrollToInstrument(idx));
-      this.railDots.push(dot);
-      railFrag.appendChild(dot);
     });
-
     this.feedEl.appendChild(slideFrag);
-    this.railEl.appendChild(railFrag);
   }
 
   sizeCanvasForSlide(slideObj) {
@@ -266,19 +212,20 @@ class FeedApp {
     canvas.className = 'poster-canvas';
     canvas.setAttribute('aria-label', entry.title);
     host.appendChild(canvas);
-    const slot = { state: 'loading', api: null, host, slideObj: { ...slideObj, canvas } };
+    const canOperate = () => idx === this.activeIndex && !this.navigation.isMoving();
+    const slot = { state: 'loading', api: null, host, canOperate, slideObj: { ...slideObj, canvas } };
     this.instances.set(idx, slot);
 
     if (this.fallbackReason) {
-      slot.api = mountFallbackInstrument(host, entry, this.phraseStore, this.fallbackReason);
-      slot.state = 'ready';
-      slideObj.frame.classList.add('is-ready');
+      this.mountStill(slot, this.fallbackReason);
       return;
     }
 
     try {
       this.sizeCanvasForSlide(slot.slideObj);
-      const mod = await import(entry.modulePath);
+      const moduleUrl = new URL(entry.modulePath, appModuleUrl);
+      moduleUrl.search = appModuleUrl.search;
+      const mod = await import(moduleUrl.href);
       // If unloaded while importing, abort cleanly
       if (this.instances.get(idx) !== slot) return;
 
@@ -295,6 +242,7 @@ class FeedApp {
         phraseStore: this.phraseStore,
         theme: this.theme,
         startSettled,
+        canOperate,
       });
 
       if (this.instances.get(idx) !== slot) {
@@ -302,9 +250,9 @@ class FeedApp {
         return;
       }
 
+      slot.api = api;
       if (this.theme !== mountTheme) api.setTheme(this.theme);
       if (this.phraseStore.getState().text !== mountPhrase) api.setPhrase(this.phraseStore.getState());
-      slot.api = api;
       if (api.readLegend) {
         slot.legend = slideObj.el.querySelector('.small-print-transcript');
       }
@@ -315,19 +263,22 @@ class FeedApp {
       if (slot.legend) slot.legend.textContent = api.readLegend();
     } catch (err) {
       if (this.instances.get(idx) !== slot) return;
-      console.error(`Instrument ${entry.id} failed to load:`, err);
-      slot.api = mountFallbackInstrument(host, entry, this.phraseStore, 'no-webgl');
-      slot.state = 'ready';
-      slideObj.frame.classList.add('is-ready');
+      this.mountStill(slot, 'load-error', err);
     }
   }
 
-  updateActiveWindow() {
-    // Update rail highlights
-    this.railDots.forEach((dot, i) => {
-      dot.setAttribute('aria-current', i === this.activeIndex ? 'true' : 'false');
-    });
+  mountStill(slot, reason, error) {
+    const { entry, frame } = slot.slideObj;
+    if (error) console.error('Instrument ' + entry.id + ' failed:', error);
+    slot.api?.dispose?.();
+    if (slot.legend) slot.legend.textContent = '';
+    slot.api = mountFallbackInstrument(slot.host, entry, this.phraseStore, reason, slot.canOperate);
+    slot.isFallback = true;
+    slot.state = 'ready';
+    frame.classList.add('is-ready');
+  }
 
+  updateActiveWindow() {
     // Lazy-load current instrument + immediate neighbours (activeIndex - 1 .. activeIndex + 1)
     for (let d = 0; d <= 1; d++) {
       if (d === 0) {
@@ -361,29 +312,51 @@ class FeedApp {
     const slide = this.slides[clamped]?.el;
     if (!slide) return;
 
-    if (instant) {
-      const prevBehavior = this.feedEl.style.scrollBehavior;
-      this.feedEl.style.scrollBehavior = 'auto';
-      this.feedEl.scrollTop = clamped * this.feedEl.clientHeight;
-      this.feedEl.style.scrollBehavior = prevBehavior;
-      this.setActiveIndex(clamped);
-    } else {
-      slide.scrollIntoView({ behavior: this.fallbackReason === 'reduced-motion' ? 'auto' : 'smooth', block: 'start' });
-    }
+    this.navigation.goTo(clamped, instant || Math.abs(clamped - this.activeIndex) > 1);
   }
 
   setActiveIndex(nextIdx) {
     if (nextIdx === this.activeIndex) return;
+    if (nextIdx > this.activeIndex) this.scrollCueMark.hidden = true;
     this.activeIndex = nextIdx;
-    this.syncActiveUrl();
+    this.setRailActive(nextIdx);
+    this.arrivalStarted = null;
+    if (this.autoplay) this.phraseStore.nextRandom({source: 'navigation'});
+    else this.syncActiveUrl();
     this.updateActiveWindow();
   }
 
   triggerActiveInstrument(opts = {}) {
+    if (this.navigation.isMoving()) return;
     const slot = this.instances.get(this.activeIndex);
     if (slot && slot.api && typeof slot.api.triggerPrimary === 'function') {
+      this.lastPlayedSlide = this.activeIndex;
       slot.dirty = true;
-      slot.api.triggerPrimary(opts);
+      try {
+        slot.api.triggerPrimary(opts);
+      } catch (error) {
+        this.mountStill(slot, 'load-error', error);
+      }
+    }
+  }
+
+  playSettledSlide(ts) {
+    const idx = this.activeIndex;
+    const slot = this.instances.get(idx);
+    const settled = !this.navigation.isMoving();
+    if (!settled || slot?.state !== 'ready' || slot.isFallback) {
+      this.arrivalStarted = null;
+      return;
+    }
+    if (this.lastPlayedSlide === idx) return;
+    this.arrivalStarted ??= ts;
+    if (ts - this.arrivalStarted < 160) return;
+
+    this.lastPlayedSlide = idx;
+    try {
+      if (!slot.api.isMoving?.()) slot.api.playOnArrival?.();
+    } catch (error) {
+      this.mountStill(slot, 'load-error', error);
     }
   }
 
@@ -396,13 +369,16 @@ class FeedApp {
       // Determine which mounted slides are actually visible in viewport right now
       const viewTop = this.feedEl.scrollTop;
       const viewBottom = viewTop + this.feedEl.clientHeight;
+      if (this.autoplay) this.playSettledSlide(ts);
 
-      for (const [idx, slot] of this.instances.entries()) {
-        if (slot.state !== 'ready' || !slot.api) continue;
-        const slideTop = idx * this.feedEl.clientHeight;
+      for (const slot of this.instances.values()) {
+        if (slot.state !== 'ready' || slot.isFallback) continue;
+        const slideTop = slot.slideObj.el.offsetTop;
         const slideBottom = slideTop + this.feedEl.clientHeight;
         const visible = slideBottom > viewTop + 2 && slideTop < viewBottom - 2;
-        if (visible && (slot.dirty || slot.api.isMoving?.())) {
+        if (!visible) continue;
+        try {
+          if (!slot.dirty && !slot.api.isMoving?.()) continue;
           slot.dirty = false;
           this.sizeCanvasForSlide(slot.slideObj);
           slot.api.render(dt);
@@ -410,6 +386,8 @@ class FeedApp {
             const words = slot.api.readLegend();
             if (slot.legend.textContent !== words) slot.legend.textContent = words;
           }
+        } catch (error) {
+          this.mountStill(slot, 'load-error', error);
         }
       }
     }
@@ -417,59 +395,66 @@ class FeedApp {
     requestAnimationFrame((nextTs) => this.tick(nextTs));
   }
 
-  // Clipboard helper
-  async copyText(text, btn, idleLabel, doneLabel) {
+  async copyText(text, message) {
+    let copied = false;
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
+      if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
+        copied = true;
       } else {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        ta.remove();
+        const field = document.createElement('textarea');
+        field.value = text;
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        try {
+          copied = document.execCommand('copy');
+        } finally {
+          field.remove();
+        }
       }
     } catch (_) {}
+    this.actionStatus.textContent = copied ? message : 'Could not copy';
+    this.actionStatus.classList.add('is-visible');
+    clearTimeout(this.actionStatusTimer);
+    this.actionStatusTimer = setTimeout(() => this.actionStatus.classList.remove('is-visible'), 1400);
+  }
 
-    if (btn) {
-      const key = btn.dataset.action + '-' + btn.dataset.idx;
-      clearTimeout(this.confirmTimers[key]);
-      btn.textContent = doneLabel;
-      btn.classList.add('is-confirmed');
-      this.confirmTimers[key] = setTimeout(() => {
-        btn.textContent = idleLabel;
-        btn.classList.remove('is-confirmed');
-      }, 1400);
-    }
+  copyPhrase() {
+    return this.copyText(this.phraseStore.getState().text, 'Phrase copied');
+  }
+
+  copyLink() {
+    const entry = INSTRUMENTS[this.activeIndex];
+    const url = buildPermalink(entry.id, this.phraseStore.getState()).toString();
+    return this.copyText(url, 'Link copied');
   }
 
   // Index drawer
   openDrawer() {
     this.drawerTrigger = document.activeElement;
     this.indexDrawer.inert = false;
-    for (const region of [this.feedEl, this.railEl, this.indexToggle.closest('header')]) region.inert = true;
+    this.feedEl.inert = true;
+    this.instrumentRail.inert = true;
     this.isDrawerOpen = true;
     this.indexDrawer.classList.add('is-open');
     this.drawerBackdrop.classList.add('is-open');
     this.indexDrawer.setAttribute('aria-hidden', 'false');
-    this.indexToggle.setAttribute('aria-expanded', 'true');
     this.renderDrawerList();
     this.searchInput.focus();
   }
 
   closeDrawer() {
     this.isDrawerOpen = false;
-    for (const region of [this.feedEl, this.railEl, this.indexToggle.closest('header')]) region.inert = false;
+    this.feedEl.inert = false;
+    this.instrumentRail.inert = false;
     this.indexDrawer.inert = true;
     const trigger = this.drawerTrigger === document.body ? this.feedEl : this.drawerTrigger;
     trigger?.focus({ preventScroll: true });
     this.indexDrawer.classList.remove('is-open');
     this.drawerBackdrop.classList.remove('is-open');
     this.indexDrawer.setAttribute('aria-hidden', 'true');
-    this.indexToggle.setAttribute('aria-expanded', 'false');
   }
 
   renderDrawerList() {
@@ -532,54 +517,20 @@ class FeedApp {
   }
 
   bindEvents() {
-    // Track scroll snap position cleanly without reloading
-    let scrollRaf = null;
-    this.feedEl.addEventListener('scroll', () => {
-      if (scrollRaf) return;
-      scrollRaf = requestAnimationFrame(() => {
-        scrollRaf = null;
-        const h = this.feedEl.clientHeight || 1;
-        const idx = Math.max(0, Math.min(INSTRUMENTS.length - 1, Math.round(this.feedEl.scrollTop / h)));
-        this.setActiveIndex(idx);
-      });
-    }, { passive: true });
-
-    // Delegate Copy / Link buttons in slide captions
-    this.feedEl.addEventListener('click', (e) => {
-      const btn = e.target.closest('.caption-btn');
-      if (!btn) return;
-      const action = btn.dataset.action;
-      const idx = Number(btn.dataset.idx);
-      const entry = INSTRUMENTS[idx] || INSTRUMENTS[this.activeIndex];
-      const st = this.phraseStore.getState();
-
-      if (action === 'copy') {
-        this.copyText(st.text, btn, 'Copy', 'Copied');
-      } else if (action === 'link') {
-        const url = buildPermalink(entry.id, st).toString();
-        this.copyText(url, btn, 'Link', 'Copied');
-      }
+    this.navigation = bindFeedScroll(this.feedEl, {
+      getIndex: () => this.activeIndex,
+      getTop: idx => this.slides[idx].el.offsetTop,
+      count: this.slides.length,
+      wheelTarget: this.instrumentRail,
+      onSettled: idx => this.setActiveIndex(idx),
+      reducedMotion: () => this.fallbackReason === 'reduced-motion' ||
+        matchMedia('(prefers-reduced-motion: reduce)').matches,
     });
 
-    this.brandLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.scrollToInstrument(0);
-    });
+    this.setRailActive = bindInstrumentRail(this.instrumentRail, INSTRUMENTS,
+      index => this.scrollToInstrument(index));
+    this.setRailActive(this.activeIndex);
 
-    this.themeToggle.addEventListener('click', () => {
-      this.applyTheme(this.theme === 'dark' ? 'light' : 'dark');
-    });
-
-    this.soundToggle.addEventListener('click', () => {
-      sound.toggle();
-      this.updateSoundUi();
-    });
-    this.updateSoundUi();
-
-    this.indexToggle.addEventListener('click', () => {
-      if (this.isDrawerOpen) this.closeDrawer();
-      else this.openDrawer();
-    });
     this.drawerClose.addEventListener('click', () => this.closeDrawer());
     this.drawerBackdrop.addEventListener('click', () => this.closeDrawer());
 
@@ -597,8 +548,9 @@ class FeedApp {
     });
 
     window.addEventListener('resize', () => {
+      this.navigation.realign();
       for (const slot of this.instances.values()) {
-        if (slot.state === 'ready') {
+        if (slot.state === 'ready' && !slot.isFallback) {
           slot.dirty = true;
           this.sizeCanvasForSlide(slot.slideObj);
           slot.api?.resize?.();
@@ -619,21 +571,21 @@ class FeedApp {
       if (this.isDrawerOpen || tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (tag === 'BUTTON' && e.code === 'Space') return;
 
-      if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') {
+      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === 'j' || e.key === 'J') {
         e.preventDefault();
-        this.scrollToInstrument(this.activeIndex + 1);
-      } else if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K') {
+        if (!e.repeat) this.navigation.step(1);
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp' || e.key === 'k' || e.key === 'K') {
         e.preventDefault();
-        this.scrollToInstrument(this.activeIndex - 1);
+        if (!e.repeat) this.navigation.step(-1);
+      } else if (e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        this.scrollToInstrument(e.key === 'Home' ? 0 : INSTRUMENTS.length - 1);
       } else if (e.code === 'Space') {
         e.preventDefault();
-        this.triggerActiveInstrument({ replay: e.shiftKey });
-      } else if (e.key === 'ArrowRight') {
+        if (!e.repeat) this.triggerActiveInstrument({ replay: e.shiftKey });
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         e.preventDefault();
-        this.phraseStore.step(1, { source: 'keyboard' });
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        this.phraseStore.step(-1, { source: 'keyboard' });
+        if (!e.repeat) this.triggerActiveInstrument();
       } else if (e.key === '/') {
         e.preventDefault();
         this.openDrawer();
@@ -643,16 +595,12 @@ class FeedApp {
       } else if (e.key === 's' || e.key === 'S') {
         e.preventDefault();
         sound.toggle();
-        this.updateSoundUi();
       } else if (e.key === 'c' || e.key === 'C') {
         e.preventDefault();
-        const btn = this.slides[this.activeIndex]?.el.querySelector('[data-action="copy"]');
-        this.copyText(this.phraseStore.getState().text, btn, 'Copy', 'Copied');
+        this.copyPhrase();
       } else if (e.key === 'l' || e.key === 'L') {
         e.preventDefault();
-        const btn = this.slides[this.activeIndex]?.el.querySelector('[data-action="link"]');
-        const url = buildPermalink(INSTRUMENTS[this.activeIndex].id, this.phraseStore.getState()).toString();
-        this.copyText(url, btn, 'Link', 'Copied');
+        this.copyLink();
       }
     });
   }

@@ -1,4 +1,5 @@
-import { mechanism, lettering, mono, serif } from '../core/photograph.js';
+import { mechanism } from 'mcp-mechanism';
+import { lettering, mono } from '../core/photograph.js';
 import { sound } from '../core/audio.js';
 
 // Lift the screwed brass badge intact. Reconstruct the narrow mounting area
@@ -32,12 +33,12 @@ function brassInsert(image) {
   return tile;
 }
 
-export const createInstrument = mechanism('cipher-machine', ({ctx,crop,next,image}) => {
+export const createInstrument = mechanism('cipher-machine', ({ctx,crop,image}) => {
   const brass=brassInsert(image);
   return {
   smallPrint:true,
     duration:1.3,
-  start(){ next(); sound.playMechanicalDetent(.92,.18); },
+  start(){ sound.playMechanicalDetent(.92,.18); },
   step(t,prev) {
     if (Math.floor(t*8) !== Math.floor(prev*8)) sound.playMechanicalDetent(1.1,.16);
   },
@@ -79,12 +80,6 @@ export const createInstrument = mechanism('cipher-machine', ({ctx,crop,next,imag
       glow.addColorStop(.46,'rgba(251,179,79,.32)');glow.addColorStop(1,'transparent');
       ctx.fillStyle=glow;ctx.fillRect(x-44,y-44,88,88);
     }
-    ctx.save();
-    ctx.font='small-caps 28px '+serif;
-    ctx.letterSpacing='1.8px';
-    ctx.fillStyle='#e5d5b7';ctx.textBaseline='middle';ctx.textAlign='center';
-    ctx.fillText('Turn the Rotors to Decrypt',500,962);
-    ctx.restore();
   }
 };
 });

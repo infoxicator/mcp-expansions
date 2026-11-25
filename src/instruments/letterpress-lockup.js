@@ -1,12 +1,14 @@
-import { mechanism, lettering, serif, paperInk } from '../core/photograph.js';
+import { mechanism } from 'mcp-mechanism';
+import { lettering, serif, paperInk } from '../core/photograph.js';
 import { sound } from '../core/audio.js';
 
-export const createInstrument=mechanism('letterpress-lockup',({ctx,crop,next,image})=>{
+export const createInstrument=mechanism('letterpress-lockup',({ctx,crop,image})=>{
   const ink=paperInk(ctx,image,.24,.62,[35,35,28],11);
+  let previous;
   return {
   duration:.92,
-  start(){sound.playMechanicalDetent(.83,.21);},
-  step(t,p){if(p<.48 && t>=.48){next();sound.playSteelClack(.5);}},
+  start({previousPhrase}){previous=previousPhrase;sound.playMechanicalDetent(.83,.21);},
+  step(t,p){if(p<.48 && t>=.48) sound.playSteelClack(.5);},
   draw(t,phrase){
     const pressure=Math.pow(Math.sin(Math.PI*t),4);
     const shift=pressure*40;
@@ -23,8 +25,9 @@ export const createInstrument=mechanism('letterpress-lockup',({ctx,crop,next,ima
       crop(27,504,934,467,27,504+shift,934,467);
     }
     ctx.save();ctx.translate(0,shift);ctx.rotate(-.006);
-    const first=phrase.words.slice(0,2).join(' ');
-    const rows=[[first,148,660],[phrase.words[2],255,845]];
+    const print=t<.48 ? previous : phrase;
+    const first=print.words.slice(0,2).join(' ');
+    const rows=[[first,148,660],[print.words[2],255,845]];
     // Offset the highlight by less than a point to pick up the compressed paper edge.
     for(const [word,x,y] of rows) {
       const width=855-x;

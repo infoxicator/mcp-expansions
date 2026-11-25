@@ -5,11 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MCP — Physical Three-Word Instruments</title>
   <meta name="description" content="A vertical snap-scroll feed of quiet physical M·C·P instruments celebrating MCP's second birthday." />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23151514'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-family='Georgia,serif' font-size='32' fill='%23F2EDE4'%3EM%3C/text%3E%3Ccircle cx='49' cy='17' r='4.5' fill='%23C94824'/%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" sizes="any" href="./assets/brand/mcp-favicon.svg" />
   <link rel="stylesheet" href="./src/styles.css" />
+  <!-- The feed and its mechanism runtime share a version to invalidate cached modules together. -->
   <script type="importmap">
     {
       "imports": {
+        "mcp-registry": "./src/registry.js?v=4",
+        "mcp-feed-scroll": "./src/core/feed-scroll.js?v=4",
+        "mcp-mechanism": "./src/core/mechanism.js?v=4",
         "three": "./vendor/three/three.module.js",
         "three/addons/": "./vendor/three/jsm/"
       }
@@ -17,54 +21,22 @@
   </script>
 </head>
 <body>
-  <header class="topbar">
-    <a href="#top" class="brand" id="brandLink" title="Back to first instrument">
-      <span class="brand-mark">
-        <span class="brand-dot" aria-hidden="true"></span>
-        MCP
-      </span>
-      <span class="brand-sub">Instruments</span>
-    </a>
-
-    <nav class="nav-actions" aria-label="Controls">
-      <button
-        type="button"
-        class="nav-btn"
-        id="soundToggle"
-        aria-pressed="false"
-        title="Toggle physical sound (S)"
-      >
-        <svg id="soundIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
-        <span id="soundLabel">Muted</span>
-      </button>
-
-      <button
-        type="button"
-        class="nav-btn"
-        id="indexToggle"
-        aria-expanded="false"
-        aria-controls="indexDrawer"
-        title="Browse all phrases (/)"
-      >
-        <span>Index</span>
-        <span class="count-pill" id="totalCount"></span>
-      </button>
-
-      <button
-        type="button"
-        class="nav-btn"
-        id="themeToggle"
-        aria-label="Toggle color theme"
-        title="Switch light/dark theme (T)"
-      >
-        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
-      </button>
-    </nav>
-  </header>
-
+  <span class="mcp-mark" role="img" aria-label="Model Context Protocol"></span>
   <main class="feed" id="feed" tabindex="-1" aria-label="MCP instruments feed"></main>
-
-  <nav class="feed-rail" id="feedRail" aria-label="Instrument navigation"></nav>
+  <nav class="instrument-rail" id="instrumentRail" aria-label="Instrument navigation">
+    <div class="instrument-rail-track"></div>
+    <button class="instrument-preview" type="button" tabindex="-1" hidden>
+      <img alt="" width="154" height="154" />
+    </button>
+  </nav>
+  <div class="scroll-cue">
+    <span class="scroll-cue-mark" id="scrollCueMark" aria-hidden="true">
+      <span class="scroll-cue-arrow"></span>
+    </span>
+    <span class="scroll-cue-keyboard">scroll · press j / k</span>
+    <span class="scroll-cue-touch">swipe up</span>
+  </div>
+  <span class="action-status" id="actionStatus" role="status"></span>
 
   <!-- Preserved / Index Drawer -->
   <div class="drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
@@ -96,11 +68,10 @@
     <div class="drawer-list" id="drawerList" aria-label="Matching phrases"></div>
 
     <div class="drawer-foot">
-      <span>Community list in <code>phrases.json</code></span>
       <span id="drawerShowing"></span>
     </div>
   </aside>
 
-  <script type="module" src="./src/app.js"></script>
+  <script type="module" src="./src/app.js?v=4"></script>
 </body>
 </html>

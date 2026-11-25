@@ -1,8 +1,9 @@
-import { mechanism, lettering, clamp } from '../core/photograph.js';
+import { mechanism } from 'mcp-mechanism';
+import { lettering, clamp } from '../core/photograph.js';
 import { sound } from '../core/audio.js';
 
 const hinges=[177,505,833];
-export const createInstrument=mechanism('destination-blind',({ctx,crop,phraseStore,next})=>{
+export const createInstrument=mechanism('destination-blind',({ctx,crop,phraseStore})=>{
   let sequence=[];
   function print(word,row) {
     lettering(ctx,word,109,hinges[row]+7,822,207,{
@@ -19,9 +20,9 @@ export const createInstrument=mechanism('destination-blind',({ctx,crop,phraseSto
   }
   return {
     duration:1.4,
-    start(){
-      const old=phraseStore.getState().cleanWords;
-      const end=next().cleanWords;
+    start({previousPhrase,phrase}){
+      const old=previousPhrase.cleanWords;
+      const end=phrase.cleanWords;
       sequence=old.map((w,i)=>[w,...Array.from({length:4},(_,n)=>
         phraseStore.phrases[(n*13+i*7)%phraseStore.phrases.length].words[i]),end[i]].map(v=>v.replace(/,$/,'').toUpperCase()));
     },

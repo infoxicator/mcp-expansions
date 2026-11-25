@@ -1,18 +1,16 @@
-import { mechanism, lettering } from '../core/photograph.js';
+import { mechanism } from 'mcp-mechanism';
+import { lettering } from '../core/photograph.js';
 import { sound } from '../core/audio.js';
 
-export const createInstrument=mechanism('flip-contract',({ctx,crop,phraseStore,next})=>{
+export const createInstrument=mechanism('flip-contract',({ctx,crop})=>{
   let side=0;
-  const memory=[phraseStore.getState(), null];
+  let previous;
   return {
     duration:.88,
-    start(){sound.playUsbUnplug();},
-    sync(state){memory[side]=state;if(memory[1-side]?.text===state.text) memory[1-side]=null;},
+    start({previousPhrase}){previous=previousPhrase;sound.playUsbUnplug();},
     step(t,p){
       if (p<.5 && t>=.5) {
         side=1-side;
-        const saved=memory[side], from={source:'flip-contract'};
-        memory[side]=!saved ? next() : saved.isRemix ? phraseStore.setRemix(saved.words,from) : phraseStore.setById(saved.id,from);
         sound.playMechanicalDetent(1.1,.18);
       }
       if (t===1 && p<1) sound.playUsbPlug();
@@ -44,7 +42,8 @@ export const createInstrument=mechanism('flip-contract',({ctx,crop,phraseStore,n
       const x=170;
       lettering(ctx,'CC'+(side+1)+'   /   I·O',x,298,480,21,{align:'left',color:'#605846'});
       const opts={family:'Inter, sans-serif',weight:550,align:'left',color:'#252520'};
-      for (const [i,word] of phrase.cleanWords.entries())
+      const face=t<.5 ? previous : phrase;
+      for (const [i,word] of face.cleanWords.entries())
         lettering(ctx,word.toUpperCase(),x,386+i*112,602,99,opts);
       ctx.fillStyle='rgba(47,37,23,'+(angle*.36)+')';
       ctx.fillRect(96,231,737,472);

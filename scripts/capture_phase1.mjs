@@ -54,7 +54,7 @@ async function main() {
     await page.screenshot({ path: path.join(OUT_DIR, '01-newton-protocol-rest.png') });
 
     // The return swing after the third impact keeps the complete phrase in view.
-    await page.keyboard.press('Space');
+    await page.keyboard.press('Shift+Space');
     await page.waitForFunction(() => document.querySelectorAll('.newton-word.is-revealed').length === 0);
     await page.waitForFunction(() => document.querySelectorAll('.newton-word.is-revealed').length === 3);
     await page.waitForTimeout(1040);
@@ -150,7 +150,7 @@ async function main() {
     });
     recPage.on('pageerror', (err) => errors.push(`rec pageerror: ${err.message}`));
 
-    await recPage.goto(`${baseUrl}/?p=more-cake-please&theme=light`, { waitUntil: 'networkidle' });
+    await recPage.goto(`${baseUrl}/?p=more-cake-please&theme=light&intro=0`, { waitUntil: 'networkidle' });
     await waitReady(recPage, 0);
     await waitReady(recPage, 1);
 
@@ -190,9 +190,9 @@ async function main() {
     // Hold briefly at rest on Newton Protocol (1.2s)
     await recPage.waitForTimeout(1200);
 
-    // Pull & release M ball via Space -> clacks out "More", "Cake,", "Please" with P swinging out!
+    // Pull & release M ball via Shift+Space -> clacks out "More", "Cake,", "Please" with P swinging out!
     const pull=clock();
-    await recPage.keyboard.press('Space');
+    await recPage.keyboard.press('Shift+Space');
     await recPage.waitForTimeout(4400);
 
     // Smoothly snap-scroll down to Instrument 2 (The Contract) using a native touch swipe
@@ -200,12 +200,15 @@ async function main() {
     await recPage.waitForTimeout(1300);
 
     const seat=clock();
-    await recPage.mouse.click(795, 565);
+    await recPage.keyboard.press('Shift+Space');
     await recPage.waitForFunction(() => document.querySelector('[data-id="the-contract"] canvas')
       .getAttribute('aria-label') === 'The Contract · More Cake Please');
     await recPage.waitForTimeout(1900);
     const unplug=clock();
-    await recPage.mouse.click(795, 565);
+    await recPage.mouse.move(795, 565);
+    await recPage.mouse.down();
+    await recPage.mouse.move(957, 565, {steps:10});
+    await recPage.mouse.up();
     await recPage.waitForTimeout(1200);
     const replug=clock();
     await recPage.mouse.click(820, 570);

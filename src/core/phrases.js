@@ -1,10 +1,12 @@
 // Phrase store, non-repeating shuffle deck, and URL permalink sync (?i=, ?p=, ?w=)
 
+const phraseKey = words => words.join(" ").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "");
+
 export class PhraseStore {
   constructor() {
     this.phrases = [];
     this.deck = [];
-    this.deckCursor = -1;
+    this.seen = new Set();
     this.currentIndex = 0; // -1 when custom ?w=M,C,P remix
     this.currentWords = ['More', 'Cake,', 'Please'];
     this.currentNote = 'Official birthday transport specification for November 25.';
@@ -25,22 +27,23 @@ export class PhraseStore {
         Array.isArray(item.words) &&
         item.words.length === 3
     );
-    this._rebuildDeck(0);
+    this.phraseKeys = this.phrases.map(entry => phraseKey(entry.words));
+    this._rebuildDeck();
     return this.phrases;
   }
 
-  _rebuildDeck(excludeIndex = -1) {
+  _rebuildDeck(previousKey) {
     const arr = Array.from({ length: this.phrases.length }, (_, i) => i);
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-    if (excludeIndex >= 0 && arr[0] === excludeIndex && arr.length > 1) {
-      const swap = 1 + Math.floor(Math.random() * (arr.length - 1));
-      [arr[0], arr[swap]] = [arr[swap], arr[0]];
+    const last = arr.length - 1;
+    if (this.phraseKeys[arr[last]] === previousKey) {
+      const swap = arr.findIndex(index => this.phraseKeys[index] !== previousKey);
+      if (swap >= 0) [arr[last], arr[swap]] = [arr[swap], arr[last]];
     }
     this.deck = arr;
-    this.deckCursor = -1;
   }
 
   initFromUrl() {
@@ -94,6 +97,7 @@ export class PhraseStore {
     this.currentNote = entry.note || '';
     this.currentCategory = entry.category || 'protocol';
     this.isRemix = false;
+    this.seen.add(this.phraseKeys[safeIdx]);
     this._emit({ source, silentUrl });
     return this.getState();
   }
@@ -111,28 +115,21 @@ export class PhraseStore {
     this.currentNote = 'Custom M·C·P combination.';
     this.currentCategory = 'remix';
     this.isRemix = true;
+    this.seen.add(phraseKey(this.currentWords));
     this._emit({ source, silentUrl });
     return this.getState();
   }
 
   nextRandom(opts = {}) {
     if (!this.phrases.length) return this.getState();
-    this.deckCursor += 1;
-    if (this.deckCursor >= this.deck.length) {
-      this._rebuildDeck(this.currentIndex);
-      this.deckCursor = 0;
+    while (this.deck.length) {
+      const next = this.deck.pop();
+      if (!this.seen.has(this.phraseKeys[next])) return this.setByIndex(next, opts);
     }
-    const nextIdx = this.deck[this.deckCursor];
-    if (nextIdx === this.currentIndex && this.phrases.length > 1) {
-      return this.nextRandom(opts);
-    }
-    return this.setByIndex(nextIdx, opts);
-  }
 
-  step(delta, opts = {}) {
-    if (!this.phrases.length) return this.getState();
-    const base = this.currentIndex >= 0 ? this.currentIndex : 0;
-    return this.setByIndex(base + delta, opts);
+    this.seen.clear();
+    this._rebuildDeck(phraseKey(this.currentWords));
+    return this.setByIndex(this.deck.pop(), opts);
   }
 
   subscribe(fn) {

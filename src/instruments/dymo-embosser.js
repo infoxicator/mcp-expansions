@@ -1,13 +1,14 @@
-import { mechanism, lettering, mono, clamp } from '../core/photograph.js';
+import { mechanism } from 'mcp-mechanism';
+import { lettering, mono, clamp } from '../core/photograph.js';
 import { sound } from '../core/audio.js';
 
 const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-export const createInstrument=mechanism('dymo-embosser',({ctx,crop,next})=>{
+export const createInstrument=mechanism('dymo-embosser',({ctx,crop})=>{
   let legend='', index=0, lastIndex=0;
   return {
     smallPrint:true,
     duration:1.64,
-    start(){legend=next().cleanWords.join(' ').toUpperCase();index=lastIndex=0;},
+    start({phrase}){legend=phrase.cleanWords.join(' ').toUpperCase();index=lastIndex=0;},
     step(t){
       index=Math.min(legend.length,Math.floor(t*(legend.length+1)));
       if(index!==lastIndex){sound.playMechanicalDetent(.94+index%3*.08,.16);lastIndex=index;}

@@ -1,12 +1,13 @@
-import { mechanism, lettering, clamp } from '../core/photograph.js';
+import { mechanism } from 'mcp-mechanism';
+import { lettering, clamp } from '../core/photograph.js';
 import { sound } from '../core/audio.js';
 
-export const createInstrument=mechanism('combination-lock',({ctx,crop,phraseStore,next})=>{
+export const createInstrument=mechanism('combination-lock',({ctx,crop,phraseStore})=>{
   let previous=phraseStore.getState().cleanWords;
   return {
     smallPrint:true,
     duration:1.34,
-    start(){previous=phraseStore.getState().cleanWords;next();},
+    start({previousPhrase}){previous=previousPhrase.cleanWords;},
     step(t,p){
       if(Math.floor(t*13)!==Math.floor(p*13)) sound.playMechanicalDetent(1.02,.16);
       if(t===1&&p<1) sound.playSteelClack(.47);

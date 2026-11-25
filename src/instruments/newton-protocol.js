@@ -6,7 +6,7 @@ const HARD_PULL_THRESHOLD = .46;
 const MAX_PULL_ANGLE = 1.12;
 const openingAngle = -.82;
 
-export async function createInstrument({container, canvas, phraseStore, theme}) {
+export async function createInstrument({container, canvas, phraseStore, theme, canOperate = () => true}) {
   const [plate, bearings] = await Promise.all([
     photograph(canvas, 'newton-protocol'), loadPhotograph('balls')
   ]);
@@ -45,10 +45,6 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
     <span class="newton-word is-revealed" data-slot="2"></span>
   `;
   container.appendChild(wordLayer);
-  const caption = document.createElement('span');
-  caption.className = 'instrument-fineprint';
-  caption.textContent = 'click to clack · MCP turns 2';
-  container.appendChild(caption);
   const wordEls = [
     wordLayer.querySelector('[data-slot="0"]'),
     wordLayer.querySelector('[data-slot="1"]'),
@@ -62,17 +58,15 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
   let revealActive = false;
   let clackCooldown = 0;
   let gravityScale = 1.0;
-  let hasPlayedCurrentPhrase = false;
 
   // Auto pull-back tween state (for Space or gentle click)
-  let autoPull = null; // { targetAngle, elapsed, duration, shouldAdvance }
+  let autoPull = null;
 
   // Pointer drag state
   let isDragging = false;
-  let dragStartX = 0;
   let dragStartAngle = 0;
   let dragMaxAngle = 0;
-  let dragMoved = false;
+  let press = null;
 
   function updateWordSizing(words) {
     const gauge = plate.ctx;
@@ -81,7 +75,7 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
     wordLayer.style.setProperty('--newton-size', Math.min(.119, 85 / width));
   }
 
-  function applyPhraseWords(state, { revealAll = true, markUnplayed = false } = {}) {
+  function applyPhraseWords(state, { revealAll = true } = {}) {
     updateWordSizing(state.words);
     state.words.forEach((w, i) => {
       wordEls[i].textContent = w;
@@ -89,7 +83,6 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
       wordEls[i].classList.remove('is-just-clacked');
     });
     revealedCount = revealAll ? 3 : 0;
-    if (markUnplayed) hasPlayedCurrentPhrase = false;
   }
 
   function revealNextWord() {
@@ -103,14 +96,10 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
     }
     if (revealedCount >= 3) {
       revealActive = false;
-      hasPlayedCurrentPhrase = true;
     }
   }
 
-  function prepareForSwing(shouldAdvancePhrase, pullAngle) {
-    if (shouldAdvancePhrase) {
-      phraseStore.nextRandom({ source: 'newton-protocol' });
-    }
+  function prepareForSwing(pullAngle) {
     const state = phraseStore.getState();
     applyPhraseWords(state, { revealAll: false });
     revealActive = true;
@@ -121,7 +110,8 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
     gravityScale = 0.92 + norm * 0.42;
   }
 
-  function startAutoPull(targetAngle, shouldAdvance) {
+  function startAutoPull(targetAngle, reveal = true) {
+    revealActive = false;
     if (posed) theta[0] = openingAngle;
     posed = false;
     // Reset other balls cleanly
@@ -135,10 +125,10 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
       targetAngle: -Math.abs(targetAngle),
       elapsed: 0,
       duration: 0.30,
-      shouldAdvance,
+      reveal,
     };
     // Clear words gently while drawing back
-    wordEls.forEach((el) => el.classList.remove('is-revealed'));
+    if (reveal) wordEls.forEach((el) => el.classList.remove('is-revealed'));
   }
 
 
@@ -214,9 +204,9 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
       omega[0] = 0;
       if (t >= 1) {
         const releaseAngle = theta[0];
-        const advance = autoPull.shouldAdvance;
+        const {reveal} = autoPull;
         autoPull = null;
-        prepareForSwing(advance, releaseAngle);
+        if (reveal) prepareForSwing(releaseAngle);
       }
       return;
     }
@@ -286,69 +276,72 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
     const x=(e.clientX-box.left)/box.width, y=(e.clientY-box.top)/box.height;
     return x < .56 && y > .16 && y < .70;
   }
+  function operate(replay = false) {
+    if (!replay) phraseStore.nextRandom({source: 'newton-protocol'});
+    startAutoPull(replay ? 0.42 : 0.68);
+  }
+
   function onPointerDown(e) {
-    if (!e.isPrimary || e.button !== 0 || !inLeftZone(e)) return;
-    if (posed) theta[0] = openingAngle;
-    posed = false;
-    e.preventDefault();
-    canvas.setPointerCapture?.(e.pointerId);
-    autoPull = null;
-    isDragging = true;
-    dragMoved = false;
-    dragStartX = e.clientX;
-    dragStartAngle = Math.min(0, theta[0]);
-    dragMaxAngle = Math.abs(dragStartAngle);
-    theta[1] = 0;
-    theta[2] = 0;
-    omega[0] = omega[1] = omega[2] = 0;
-    canvas.style.cursor = 'grabbing';
+    if (!e.isPrimary || e.button !== 0 || !canOperate()) return;
+    press = {x: e.clientX, y: e.clientY, canDrag: inLeftZone(e)};
+    canvas.setPointerCapture(e.pointerId);
   }
 
   function onPointerMove(e) {
-
-    if (!isDragging) {
-      canvas.style.cursor = inLeftZone(e) ? 'grab' : 'default';
+    if (!press?.canDrag) {
+      canvas.style.cursor = inLeftZone(e) ? 'grab' : 'pointer';
       return;
     }
-    const rect = canvas.getBoundingClientRect();
-    const dx = e.clientX - dragStartX;
-    if (Math.abs(dx) > 6) dragMoved = true;
-
-    // Pulling left (negative dx) increases negative angle on M ball
-    const deltaRad = (dx / (rect.width * 0.36)) * 1.1;
-    const nextAngle = Math.max(-MAX_PULL_ANGLE, Math.min(-0.04, dragStartAngle + deltaRad));
-    theta[0] = nextAngle;
-    dragMaxAngle = Math.max(dragMaxAngle, Math.abs(nextAngle));
-
-    if (dragMaxAngle > 0.14) {
-      wordEls.forEach((el) => el.classList.remove('is-revealed'));
+    const dx = e.clientX - press.x;
+    if (!isDragging) {
+      if (Math.abs(dx) <= Math.max(7, Math.abs(e.clientY - press.y))) return;
+      if (posed) theta[0] = openingAngle;
+      posed = false;
+      autoPull = null;
+      revealActive = false;
+      isDragging = true;
+      dragStartAngle = Math.min(0, theta[0]);
+      dragMaxAngle = Math.abs(dragStartAngle);
+      theta[1] = theta[2] = 0;
+      omega.fill(0);
+      canvas.style.cursor = 'grabbing';
     }
+    const deltaRad = dx / (canvas.clientWidth * 0.36) * 1.1;
+    theta[0] = Math.max(-MAX_PULL_ANGLE, Math.min(-0.04, dragStartAngle + deltaRad));
+    dragMaxAngle = Math.max(dragMaxAngle, Math.abs(theta[0]));
+    if (dragMaxAngle > 0.14) wordEls.forEach(el => el.classList.remove('is-revealed'));
   }
 
   function onPointerUp(e) {
-    if (!isDragging) return;
+    if (!press) return;
+    const dx = e.clientX - press.x;
+    const dy = e.clientY - press.y;
+    const dragging = isDragging;
+    press = null;
     isDragging = false;
-    canvas.releasePointerCapture?.(e.pointerId);
-    canvas.style.cursor = 'grab';
-    if (e.type === 'pointercancel') {
-      theta.fill(0);
-      omega.fill(0);
-      revealActive = false;
-      applyPhraseWords(phraseStore.getState());
-      updateVisuals();
-
+    canvas.style.cursor = inLeftZone(e) ? 'grab' : 'pointer';
+    if (e.type === 'pointercancel' || !canOperate()) {
+      if (dragging) {
+        theta.fill(0);
+        omega.fill(0);
+        applyPhraseWords(phraseStore.getState());
+        updateVisuals();
+      }
       return;
     }
-
-    const pulled = Math.abs(theta[0]);
-    if (!dragMoved || pulled < 0.14) {
-      // Gentle tap on M ball -> small swing that replays the current phrase
-      startAutoPull(0.36, false);
-    } else {
-      const isHardPull = pulled >= HARD_PULL_THRESHOLD &&
-        (dragStartAngle > -.4 || Math.abs(e.clientX - dragStartX) > canvas.clientWidth * .10);
-      prepareForSwing(isHardPull, theta[0]);
+    if (!dragging) {
+      if (Math.hypot(dx, dy) <= 12) operate();
+      return;
     }
+    const pulled = Math.abs(theta[0]);
+    if (pulled < .14) {
+      startAutoPull(.36);
+      return;
+    }
+    const hardPull = pulled >= HARD_PULL_THRESHOLD &&
+      (dragStartAngle > -.4 || Math.abs(dx) > canvas.clientWidth * .10);
+    if (hardPull) phraseStore.nextRandom({source: 'newton-protocol'});
+    prepareForSwing(theta[0]);
   }
 
   canvas.addEventListener('pointerdown', onPointerDown);
@@ -356,27 +349,36 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
   canvas.addEventListener('pointerup', onPointerUp);
   canvas.addEventListener('pointercancel', onPointerUp);
 
-  // Initial state: sharp, readable at rest
-  applyPhraseWords(phraseStore.getState(), { revealAll: true, markUnplayed: true });
+  canvas.style.cursor = 'pointer';
+  applyPhraseWords(phraseStore.getState());
   updateVisuals();
 
   return {
     setPhrase(state, meta = {}) {
       if (meta.source === 'newton-protocol') return;
-      applyPhraseWords(state, { revealAll: true, markUnplayed: true });
+      if (meta.source === 'navigation') {
+        autoPull = null;
+        revealActive = false;
+        theta.fill(0);
+        omega.fill(0);
+      }
+      applyPhraseWords(state);
     },
 
     setTheme(nextTheme) {
       currentTheme = nextTheme;
     },
 
-    /** Space bar: first press on a fresh phrase clacks it out; subsequent presses pull harder for a new phrase */
     triggerPrimary(opts = {}) {
-      const replayOnly = opts.replay === true || (!hasPlayedCurrentPhrase && opts.forceNew !== true);
-      if (replayOnly) {
-        startAutoPull(0.42, false);
+      operate(opts.replay);
+    },
+
+    playOnArrival() {
+      if (posed) {
+        theta[0] = openingAngle;
+        posed = false;
       } else {
-        startAutoPull(0.84, true);
+        startAutoPull(0.68, false);
       }
     },
 
@@ -395,7 +397,6 @@ export async function createInstrument({container, canvas, phraseStore, theme}) 
       canvas.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointercancel', onPointerUp);
       wordLayer.remove();
-      caption.remove();
     },
   };
 }

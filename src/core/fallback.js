@@ -167,28 +167,21 @@ function svgDiagramFor(instrumentId) {
   }
 }
 
-export function mountFallbackInstrument(container, entry, phraseStore, modeReason = 'reduced-motion') {
+export function mountFallbackInstrument(container, entry, phraseStore, modeReason = 'reduced-motion', canOperate = () => true) {
   const plate = document.createElement('div');
   plate.className = 'fallback-plate';
   plate.dataset.mode = modeReason;
 
-  const reasonLabel = modeReason === 'no-webgl' ? 'STILL PLATE · NO WEBGL' : 'STILL PLATE · REDUCED MOTION';
-
   plate.innerHTML = `
-    <div class="fallback-head">
-      <span class="fallback-id">${entry.number} · ${entry.title.toUpperCase()}</span>
-      <span class="fallback-badge">${reasonLabel}</span>
-    </div>
     <div class="fallback-body">
       ${svgDiagramFor(entry.id)}
       <div class="fallback-words" role="region" aria-live="polite">
-        <div class="fallback-word-row"><span class="fallback-letter">M</span><span class="fallback-word" data-slot="0"></span></div>
-        <div class="fallback-word-row"><span class="fallback-letter">C</span><span class="fallback-word" data-slot="1"></span></div>
-        <div class="fallback-word-row"><span class="fallback-letter">P</span><span class="fallback-word" data-slot="2"></span></div>
+        <span class="fallback-word" data-slot="0"></span>
+        <span class="fallback-word" data-slot="1"></span>
+        <span class="fallback-word" data-slot="2"></span>
       </div>
     </div>
     <div class="fallback-foot">
-      <p class="fallback-note"></p>
       <button type="button" class="fallback-roll-btn">Next phrase</button>
     </div>
   `;
@@ -201,26 +194,24 @@ export function mountFallbackInstrument(container, entry, phraseStore, modeReaso
     plate.querySelector('[data-slot="1"]'),
     plate.querySelector('[data-slot="2"]'),
   ];
-  const noteEl = plate.querySelector('.fallback-note');
-  const rollBtn = plate.querySelector('.fallback-roll-btn');
 
   const update = (state) => {
     state.words.forEach((w, i) => {
       wordEls[i].textContent = w;
     });
-    noteEl.textContent = state.note || '';
   };
 
-  rollBtn.addEventListener('click', () => {
-    phraseStore.nextRandom({ source: entry.id });
-  });
+  function roll(opts = {}) {
+    if (!opts.replay && canOperate()) phraseStore.nextRandom({source: entry.id});
+  }
+  plate.addEventListener('click', () => roll());
 
   update(phraseStore.getState());
 
   return {
     setPhrase: update,
     setTheme: () => {},
-    triggerPrimary: () => phraseStore.nextRandom({ source: entry.id }),
+    triggerPrimary: roll,
     render: () => {},
     resize: () => {},
     dispose: () => {

@@ -1,10 +1,11 @@
-import { mechanism, lettering, clamp } from '../core/photograph.js';
+import { mechanism } from 'mcp-mechanism';
+import { lettering, clamp } from '../core/photograph.js';
 import { sound } from '../core/audio.js';
 
 const lands=[[86,146,462,576],[215,487,464,701],[355,822,456,848]];
-export const createInstrument=mechanism('discover-identity',({ctx,crop,next})=>({
+export const createInstrument=mechanism('discover-identity',({ctx,crop})=>({
   duration:1.32,
-  start(){next();sound.playUsbUnplug();},
+  start(){sound.playUsbUnplug();},
   step(t,p) {
     if (p<.32 && t>=.32) sound.playUsbPlug();
     for (const [i,at] of [.36,.58,.80].entries())
