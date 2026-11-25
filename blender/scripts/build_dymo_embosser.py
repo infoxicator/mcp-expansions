@@ -162,17 +162,41 @@ def build():
 
     # 1. Left: Vintage Cast-Aluminum & Crinkle-Black Dymo M-22 Embossing Head
     hx = -1.68
-    add_beveled_box("EmbosserBody", (1.92, 2.38, 0.56), (hx, 0.0, 0.30), bevel_width=0.08, segments=5, mat=mat_body)
+    # One-piece die-cast body, with a narrower grip under the thumbwheel.
+    contour = [(1.00,.56),(.64,1.02),(.03,1.16),(-.68,.96),(-1.01,.47),
+               (-1.04,-.30),(-.77,-.86),(-.79,-1.43),(-.85,-1.97),
+               (-.70,-2.20),(-.22,-2.19),(-.08,-1.95),(-.04,-1.23),
+               (.13,-.87),(.61,-.66),(.98,-.47)]
+    profile = bpy.data.curves.new('Cast silhouette', 'CURVE')
+    profile.dimensions = '2D'
+    profile.fill_mode = 'BOTH'
+    profile.extrude = .195
+    profile.bevel_depth = .066
+    profile.bevel_resolution = 5
+    spline = profile.splines.new('BEZIER')
+    spline.bezier_points.add(len(contour)-1)
+    for point, (x,y) in zip(spline.bezier_points, contour):
+        point.co = (x,y,0)
+        point.handle_left_type = point.handle_right_type = 'AUTO'
+    spline.use_cyclic_u = True
+    body = bpy.data.objects.new('EmbosserBody',profile)
+    bpy.context.collection.objects.link(body)
+    body.location = (hx,0,.304)
+    body.data.materials.append(mat_body)
+    bpy.context.view_layer.objects.active = body
+    body.select_set(True)
+    bpy.ops.object.convert(target='MESH')
+    body.select_set(False)
     # Brushed chrome top deck collar & tape guide exit nozzle pointing +X
     add_beveled_box("ChromeGuideRail", (0.72, 1.98, 0.36), (hx + 0.92, 0.0, 0.24), bevel_width=0.035, segments=3, mat=mat_chrome)
     add_beveled_box("ChromeCutGate", (0.14, 2.08, 0.42), (hx + 1.24, 0.0, 0.26), bevel_width=0.02, segments=2, mat=mat_body)
 
     # Squeezable machined chrome trigger handle extending below (-Y)
     trig_root = bpy.data.objects.new("TriggerLever", None)
-    trig_root.location = Vector((hx - 0.30, -1.10, 0.28))
+    trig_root.location = Vector((hx + .15, -.90, .26))
     bpy.context.collection.objects.link(trig_root)
-    add_beveled_box("TriggerArm", (0.48, 0.92, 0.28), (0.0, -0.34, 0.0), bevel_width=0.045, segments=4, mat=mat_chrome, parent=trig_root)
-    add_beveled_box("TriggerGrip", (0.54, 0.56, 0.32), (0.0, -0.56, 0.0), bevel_width=0.05, segments=4, mat=mat_body, parent=trig_root)
+    add_beveled_box("TriggerArm", (0.25, 1.12, 0.28), (0.0, -0.34, 0.0), bevel_width=0.045, segments=4, mat=mat_chrome, parent=trig_root)
+    add_beveled_box("TriggerGrip", (0.33, 0.73, 0.31), (0.0, -0.56, 0.0), bevel_width=0.05, segments=4, mat=mat_body, parent=trig_root)
 
     # Rotating scalloped rotary character wheel centered on top of embossing head
     wheel_root = bpy.data.objects.new("EmbossWheel", None)

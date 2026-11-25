@@ -105,9 +105,9 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     const matName = obj.material?.name || '';
     if (matName === 'DymoMatteBlack') {
       obj.material = new THREE.MeshPhysicalMaterial({
-        color: 0x16171a,
+        color: 0x8e392c,
         metalness: 0.16,
-        roughness: 0.70,
+        roughness: 0.43,
         roughnessMap: anodizedTex,
         bumpMap: anodizedTex,
         bumpScale: 0.0036,
@@ -183,7 +183,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     const testCtx = stripsData[0].ctx;
     let fontSize = 96;
     while (fontSize > 44) {
-      testCtx.font = `700 ${fontSize}px "Inter", "Helvetica Neue", Arial, sans-serif`;
+      testCtx.font = `700 ${fontSize}px "Courier New", monospace`;
       const widest = Math.max(...words.map((txt) => testCtx.measureText(txt).width));
       if (widest <= 740) break;
       fontSize -= 3;
@@ -248,7 +248,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       bctx.fillRect(150, 44, 4, h - 88);
 
       // Bold embossed word across the glossy strip
-      drawRaised(word, 184, h * 0.52, `700 ${fontSize}px "Inter", "Helvetica Neue", Arial, sans-serif`, 'left');
+      drawRaised(word, 184, h * 0.52, `700 ${fontSize}px "Courier New", monospace`, 'left');
 
       // Right-end subtle Dymo tear-tab alignment dot
       ctx.fillStyle = 'rgba(242, 243, 245, 0.28)';
