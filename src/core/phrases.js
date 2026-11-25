@@ -54,7 +54,8 @@ export class PhraseStore {
       }
     }
 
-    const pParam = params.get('p');
+    const slug = params.get('p');
+    const pParam = slug === 'merely-another-protocol' ? 'merely-ceremonial-protocol' : slug;
     if (pParam) {
       const idx = this.phrases.findIndex((p) => p.id === pParam);
       if (idx >= 0) {

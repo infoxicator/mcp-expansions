@@ -6,6 +6,12 @@ import { chromium } from 'playwright-core';
 const local = process.argv[2] ? null : await startServer();
 const origin = process.argv[2] ?? local.baseUrl;
 const catalog = JSON.parse(readFileSync('phrases.json', 'utf8'));
+for (const row of catalog) {
+  assert.equal(row.words.length, 3, row.id);
+  assert.equal(row.words.map(word => word[0]).join(''), 'MCP', row.id);
+}
+assert.equal(new Set(catalog.map(row => row.id)).size, catalog.length);
+console.log(`${catalog.length} unique catalog entries have strict M·C·P initials.`);
 const browser = await chromium.launch({
   channel: 'chrome', args: ['--use-gl=angle', '--use-angle=metal', '--ignore-gpu-blocklist'],
 });
