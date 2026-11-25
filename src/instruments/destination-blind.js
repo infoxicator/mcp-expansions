@@ -7,7 +7,7 @@ const FLAP_X = 0.15;
 const FLAP_Z = 0.415;
 const FLAP_W = 3.66;
 const HALF_H = 0.365;
-const GAP = 0.016;
+const GAP = 0.006;
 
 // Authentic intermediate railway-board words to cycle through during split-flap clatter
 const FLAP_POOL = [
@@ -70,7 +70,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
   root.traverse((obj) => {
     if (obj.name.startsWith('FlapAxle_')) {
-      obj.position.z = FLAP_Z - 0.024;
+      obj.position.z = FLAP_Z - 0.062;
     } else if (obj.name.startsWith('FlapBushing')) {
       obj.position.z = FLAP_Z + 0.002;
     }
@@ -163,7 +163,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     fullCtx.font = `600 ${fontSize}px "Inter", "Helvetica Neue", Arial, sans-serif`;
     fullCtx.textAlign = 'left';
     fullCtx.textBaseline = 'middle';
-    fullCtx.fillText(text, 56, h * 0.5 + 4);
+    fullCtx.fillText(text, 56, h * 0.5 + 4, maxW);
 
     // Subtle mechanical side hinge cutouts at center seam
     fullCtx.fillStyle = '#060708';
@@ -188,7 +188,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     target.ctx.drawImage(fullCardCanvas, 0, isTop ? 0 : 128, 1024, 128, 0, 0, 1024, 128);
     // Subtle dark hairline along the split edge
     target.ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    target.ctx.fillRect(0, isTop ? 124 : 0, 1024, 4);
+    target.ctx.fillRect(0, isTop ? 127 : 0, 1024, 1);
     target.tex.needsUpdate = true;
   }
 
