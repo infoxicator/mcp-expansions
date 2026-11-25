@@ -3,7 +3,7 @@ import { studio, createStudioScene, createContactShadow } from '../core/studio.j
 import { sound } from '../core/audio.js';
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#b7a59e');
+  const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'letterpress-lockup');
 
   // Overhead studio flat-lay framing the blued-steel chase lockup on the left + 600gsm cotton proof on the right
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 45);
@@ -410,7 +410,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       proofTex.dispose();
       woodTex.dispose();
       slugTextures.forEach((s) => s.tex.dispose());
+      scene.userData.plates.light.dispose();
+      scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {
+        obj.shadow?.dispose();
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
           if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());

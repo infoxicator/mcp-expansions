@@ -3,7 +3,7 @@ import { studio, createStudioScene, createContactShadow } from '../core/studio.j
 import { sound } from '../core/audio.js';
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#868775');
+  const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'cipher-machine');
 
   // Elevated 3/4 studio macro angle framing the charcoal cipher box, knurled M·C·P rotors, brass crank, and foreground paper tape
   const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 45);
@@ -446,7 +446,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       canvas.removeEventListener('pointercancel', onPointerUp);
       faceTex.dispose();
       tapeTex.dispose();
+      scene.userData.plates.light.dispose();
+      scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {
+        obj.shadow?.dispose();
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
           if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());

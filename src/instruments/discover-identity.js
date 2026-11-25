@@ -7,7 +7,7 @@ const PACKET_NAMES = ['SOP', "SOP'", "SOP''"];
 const NODE_ROLES = ['NEAR · M', 'E-MARK · C', 'FAR · P'];
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#b29a7c');
+  const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'discover-identity');
 
   // Macro overhead product flat-lay camera framing VCONN terminal + all 3 cable identity nodes with balanced margins
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 55);
@@ -437,7 +437,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       canvas.removeEventListener('pointercancel', onPointerUp);
       termTex.dispose();
       screens.forEach((s) => s.tex.dispose());
+      scene.userData.plates.light.dispose();
+      scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {
+        obj.shadow?.dispose();
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
           if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());

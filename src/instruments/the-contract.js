@@ -13,7 +13,7 @@ const NEGOTIATION_STEPS = [
 ];
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#81949a');
+  const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'the-contract');
 
   // Product-photography macro flat-lay framing: matchbox meter centered (~44% width) flanked by both pale grey USB-C plugs & cables
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 45);
@@ -569,7 +569,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       canvas.removeEventListener('pointercancel', onPointerUp);
       oledTex.dispose();
       chassisDecalTex.dispose();
+      scene.userData.plates.light.dispose();
+      scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {
+        obj.shadow?.dispose();
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
           if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());

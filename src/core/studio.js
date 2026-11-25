@@ -10,8 +10,8 @@ export const STUDIO_THEMES = {
     shadowOpacity: 0.31,
     aoOpacity: 0.30,
     exposure: 1.04,
-    envIntensity: 1.25,
-    keyIntensity: 1.48,
+    envIntensity: .85,
+    keyIntensity: .79,
     fillIntensity: 0.24,
     rimIntensity: 0.32,
   },
@@ -22,7 +22,7 @@ export const STUDIO_THEMES = {
     aoOpacity: 0.64,
     exposure: 1.10,
     envIntensity: 1.0,
-    keyIntensity: 2.35,
+    keyIntensity: 1.06,
     fillIntensity: 0.52,
     rimIntensity: 1.18,
   },
@@ -32,7 +32,7 @@ class StudioRuntime {
   constructor() {
     this.renderer = null;
     this.pmrem = null;
-    this.environment = null;
+    this.environments = {};
     this.environmentReady = null;
     this.gltfLoader = null;
 
@@ -74,6 +74,7 @@ class StudioRuntime {
     renderer.toneMappingExposure = 1.04;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(1);
     renderer.setSize(1080, 1080, false);
     this.currentSize = 1080;
@@ -93,12 +94,11 @@ class StudioRuntime {
 
   prepareLighting() {
     this.ensureRenderer();
-    this.environmentReady ??= new HDRLoader().loadAsync('./assets/lighting/studio.hdr')
-      .then((panorama) => {
-        const target = this.pmrem.fromEquirectangular(panorama);
-        this.environment = target.texture;
-        panorama.dispose();
-      }).catch((error) => {
+    this.environmentReady ??= Promise.all(['light','dark'].map(async (theme) => {
+      const panorama = await new HDRLoader().loadAsync('./assets/lighting/' + theme + '.hdr');
+      this.environments[theme] = this.pmrem.fromEquirectangular(panorama).texture;
+      panorama.dispose();
+    })).catch((error) => {
         this.environmentReady = null;
         throw error;
       });
@@ -127,7 +127,14 @@ class StudioRuntime {
     const preset = STUDIO_THEMES[theme === 'dark' ? 'dark' : 'light'];
     renderer.toneMappingExposure = preset.exposure * exposureMultiplier;
     if (!scene.userData.surfacesReady) {
+      const depthOnly = new THREE.MeshBasicMaterial({ colorWrite: false });
       scene.traverse((object) => {
+        if (object.isMesh && scene.userData.fixed.has(object.userData.name ?? object.name)) {
+          object.material = depthOnly;
+          object.castShadow = false;
+          object.renderOrder = -2;
+          return;
+        }
         if (object.geometry?.attributes.color && object.material?.isMeshStandardMaterial) {
           object.material.vertexColors = true;
         }
@@ -151,7 +158,7 @@ class StudioRuntime {
       });
       const lens = new THREE.ShaderMaterial({
         uniforms: {
-          frame: { value: this.negative.texture }, depth: { value: depth },
+          photograph: { value: null }, frame: { value: this.negative.texture }, depth: { value: depth },
           pixel: { value: new THREE.Vector2() }, focus: { value: 1 },
           clip: { value: new THREE.Vector2() },
         },
@@ -160,7 +167,7 @@ class StudioRuntime {
           void main() { coord = uv; gl_Position = vec4(position.xy, 0., 1.); }
         `,
         fragmentShader: `
-          uniform sampler2D frame, depth;
+          uniform sampler2D frame, depth, photograph;
           uniform vec2 pixel, clip;
           uniform float focus;
           varying vec2 coord;
@@ -168,16 +175,17 @@ class StudioRuntime {
             float z = texture2D(depth, coord).r;
             float distance = clip.x * clip.y / (clip.y - z * (clip.y - clip.x));
             float radius = min(1.6, max(0., abs(distance - focus) - .36) * .84);
-            vec3 light = texture2D(frame, coord).rgb * .4;
+            vec4 sampleColor = texture2D(frame, coord) * .4;
             for (int i = 0; i < 6; i++) {
               float a = float(i) * 1.047198;
-              light += .1 * texture2D(frame, coord + vec2(cos(a), sin(a)) * pixel * radius).rgb;
+              sampleColor += .1 * texture2D(frame, coord + vec2(cos(a), sin(a)) * pixel * radius);
             }
-            gl_FragColor = vec4(light, 1.);
+            gl_FragColor = vec4(sampleColor.rgb / max(sampleColor.a, .0001), 1.);
             #include <tonemapping_fragment>
+            gl_FragColor.rgb = mix(texture2D(photograph, coord).rgb, gl_FragColor.rgb, sampleColor.a);
             #include <colorspace_fragment>
             float grain = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056,.00583715))));
-            gl_FragColor.rgb += (grain - .5) * .014;
+            gl_FragColor.rgb += (grain - .5) * .006;
           }
         `,
         depthTest: false, depthWrite: false,
@@ -188,6 +196,7 @@ class StudioRuntime {
     }
     this.negative.setSize(w, h);
     const uniforms = this.lens.material.uniforms;
+    uniforms.photograph.value = scene.userData.photograph;
     uniforms.depth.value = this.negative.depthTexture;
     uniforms.pixel.value.set(1 / w, 1 / h);
     uniforms.clip.value.set(camera.near, camera.far);
@@ -197,27 +206,6 @@ class StudioRuntime {
     renderer.render(scene, camera);
     renderer.setRenderTarget(null);
     renderer.render(this.lens, this.lensCamera);
-  }
-
-  getSweep(stock, theme) {
-    const key = stock + theme;
-    if (this.textureCache.has(key)) return this.textureCache.get(key);
-    const color = new THREE.Color(stock);
-    const paper = document.createElement('canvas');
-    paper.width = paper.height = 384;
-    const ctx = paper.getContext('2d');
-    const gradient = ctx.createRadialGradient(72, 40, 0, 85, 30, 500);
-    const dark = theme === 'dark';
-    for (const [stop, gain] of [[0, 1.35], [.56, .91], [1, .59]]) {
-      const tone = color.clone().multiplyScalar(gain * (dark ? .075 : 1));
-      gradient.addColorStop(stop, '#' + tone.getHexString());
-    }
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 384, 384);
-    const texture = new THREE.CanvasTexture(paper);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    this.textureCache.set(key, texture);
-    return texture;
   }
 
   /** Cached subtle anodized aluminum micro-grain roughness & bump map */
@@ -308,7 +296,7 @@ class StudioRuntime {
     roughCanvas.width = w;
     roughCanvas.height = h;
     const rctx = roughCanvas.getContext('2d');
-    rctx.fillStyle = 'rgb(11, 11, 11)';
+    rctx.fillStyle = 'rgb(27, 27, 27)';
     rctx.fillRect(0, 0, w, h);
 
     const bumpCanvas = document.createElement('canvas');
@@ -345,7 +333,7 @@ class StudioRuntime {
     };
 
     // Precision satin laser-etched finish on mirror chrome
-    drawGlyph(actx, '#1B1E24', '#383C44', 2.0, 0);
+    drawGlyph(actx, '#73797b', '#646a6c', 1.2, 0);
     drawGlyph(rctx, 'rgb(142, 142, 142)', 'rgb(175, 175, 175)', 2.8, 0);
     drawGlyph(bctx, 'rgb(28, 28, 28)', 'rgb(96, 96, 96)', 4.2, 1.5);
 
@@ -393,13 +381,22 @@ export const studio = new StudioRuntime();
 /**
  * Helper to create a studio-lit scene with seamless shadow-catching floor and calibrated lights.
  */
-export function createStudioScene(theme = 'light', stock = '#c3b39c') {
+export async function createStudioScene(theme, instrumentId) {
   const preset = STUDIO_THEMES[theme === 'dark' ? 'dark' : 'light'];
   const scene = new THREE.Scene();
-  scene.background = studio.getSweep(stock, theme);
-  scene.environment = studio.environment;
+  const base = './assets/plates/' + instrumentId + '/';
+  const loader = new THREE.TextureLoader();
+  const [light, dark, names] = await Promise.all([
+    loader.loadAsync(base + 'light.webp'), loader.loadAsync(base + 'dark.webp'),
+    fetch(base + 'hardware.json').then(response => response.json()),
+  ]);
+  light.colorSpace = dark.colorSpace = THREE.SRGBColorSpace;
+  scene.userData.plates = { light, dark };
+  scene.userData.fixed = new Set(names);
+  scene.userData.photograph = scene.userData.plates[theme];
+  scene.environment = studio.environments[theme];
   scene.environmentIntensity = preset.envIntensity;
-  scene.environmentRotation.y = 1.82;
+  scene.environmentRotation.y = -.16;
 
   // Main overhead-left softbox key directional light with crisp soft shadows
   const keyLight = new THREE.DirectionalLight(0xfffaf2, preset.keyIntensity);
@@ -442,8 +439,8 @@ export function createStudioScene(theme = 'light', stock = '#c3b39c') {
 
   const applyTheme = (nextTheme) => {
     const p = STUDIO_THEMES[nextTheme === 'dark' ? 'dark' : 'light'];
-    scene.background = studio.getSweep(stock, nextTheme);
-    scene.environment = studio.environment;
+    scene.userData.photograph = scene.userData.plates[nextTheme];
+    scene.environment = studio.environments[nextTheme];
     scene.environmentIntensity = p.envIntensity;
     keyLight.intensity = p.keyIntensity;
     fillLight.intensity = p.fillIntensity;

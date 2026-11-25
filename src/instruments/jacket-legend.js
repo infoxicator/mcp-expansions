@@ -7,7 +7,7 @@ const SEGMENTS_V = 28;
 const CABLE_RADIUS = 0.24;
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#9caac4');
+  const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'jacket-legend');
 
   // Macro overhead product flat-lay camera framing the full cable + both anodized USB-C plugs & stainless tongues
   const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 50);
@@ -481,7 +481,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       legendTex.dispose();
       cableGeo.dispose();
       cableMat.dispose();
+      scene.userData.plates.light.dispose();
+      scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {
+        obj.shadow?.dispose();
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
           if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());

@@ -15,7 +15,7 @@ const HARD_PULL_THRESHOLD = 0.46; // radians (~26 deg): below = replay current, 
 const MAX_PULL_ANGLE = 1.12; // ~64 deg
 
 export async function createInstrument({ container, canvas, phraseStore, theme, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#c2b29a');
+  const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'newton-protocol');
 
   // Studio 60mm portrait framing: cradle sits cleanly in upper-middle of square poster
   const camera = new THREE.PerspectiveCamera(27, 1, 0.1, 40);

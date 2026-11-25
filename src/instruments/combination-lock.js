@@ -9,7 +9,7 @@ const NEIGHBOR_WORDS = [
 ];
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#ba9b68');
+  const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'combination-lock');
 
   // Elevated overhead studio macro framing the full padlock (U-shackle + 3 word tumblers + end cap)
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 50);
@@ -330,7 +330,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     dispose() {
       canvas.removeEventListener('pointerdown', onPointerDown);
       drumTextures.forEach((d) => d.tex.dispose());
+      scene.userData.plates.light.dispose();
+      scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {
+        obj.shadow?.dispose();
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
           if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());

@@ -3,7 +3,7 @@ import { studio, createStudioScene, createContactShadow } from '../core/studio.j
 import { sound } from '../core/audio.js';
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#a2a59a');
+  const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'mechanical-typewriter');
 
   // Elevated 3/4 overhead studio macro framing the full typewriter deck, carriage knobs & cotton bond sheet
   const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 55);
@@ -405,7 +405,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       canvas.removeEventListener('pointerdown', onPointerDown);
       paperTex.dispose();
       keyTextures.forEach((t) => t.dispose());
+      scene.userData.plates.light.dispose();
+      scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {
+        obj.shadow?.dispose();
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
           if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());

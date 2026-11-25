@@ -17,7 +17,7 @@ const FLAP_POOL = [
 ];
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#87969d');
+  const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'destination-blind');
 
   // Clean eye-level architectural product view with gentle elevated angle & studio margins
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 45);
@@ -395,7 +395,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
         row.flipFrontTex.tex.dispose();
         row.flipBackTex.tex.dispose();
       });
+      scene.userData.plates.light.dispose();
+      scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {
+        obj.shadow?.dispose();
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
           if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());

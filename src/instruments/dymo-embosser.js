@@ -3,7 +3,7 @@ import { studio, createStudioScene, createContactShadow } from '../core/studio.j
 import { sound } from '../core/audio.js';
 
 export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = createStudioScene(theme, '#8baca0');
+  const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'dymo-embosser');
 
   // Macro overhead studio flat-lay framing the vintage cast-metal Dymo wheel on the left & 3 glossy embossed strips on the right
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 45);
@@ -381,7 +381,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
         s.tex.dispose();
         s.bumpTex.dispose();
       });
+      scene.userData.plates.light.dispose();
+      scene.userData.plates.dark.dispose();
       scene.traverse((obj) => {
+        obj.shadow?.dispose();
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
           if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
