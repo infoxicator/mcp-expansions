@@ -1,589 +1,151 @@
-import * as THREE from 'three';
-import { studio, createStudioScene, createContactShadow } from '../core/studio.js';
+import { photograph, clamp, mono } from '../core/photograph.js';
 import { sound } from '../core/audio.js';
 
-const UNPLUGGED_X = 0.96;
-const MAGNETIC_SNAP_X = 0.44;
-const NEGOTIATION_STEPS = [
-  { until: 0.24, mode: 'pd', volts: '5.00', pdo: 'SRC 5V', pitch: 0.92 },
-  { until: 0.48, mode: 'pd', volts: '9.00', pdo: 'PDO 2/4', pitch: 1.02 },
-  { until: 0.72, mode: 'pd', volts: '15.00', pdo: 'PDO 3/4', pitch: 1.12 },
-  { until: 0.98, mode: 'pd', volts: '20.00', pdo: 'PDO 4/4', pitch: 1.22 },
-  { until: 1.30, mode: 'ok', volts: '20.00', pdo: 'CONTRACT OK', pitch: 1.42 },
-];
+const readings = ['5.00V','9.00V','15.00V','20.00V','CONTRACT OK'];
+const until = [240,480,720,980,1300];
 
-export async function createInstrument({ canvas, phraseStore, theme, startSettled = false, onReady }) {
-  const { scene, applyTheme: applyStudioTheme } = await createStudioScene(theme, 'the-contract');
-
-  // Product-photography macro flat-lay framing: matchbox meter centered (macro crop) flanked by both pale grey USB-C plugs & cables
-  const camera = new THREE.PerspectiveCamera(23.5, 1, 0.1, 45);
-  camera.position.set(1.40, 13.55, 5.90);
-  camera.lookAt(0.26, 0.28, 0.0);
-  camera.rotateZ(THREE.MathUtils.degToRad(1));
-
-  const root = await studio.loadGLB('./assets/models/the-contract.glb', scene);
-  scene.add(root);
-
-  const anodizedTex = studio.getAnodizedTexture();
-  const cableTex = studio.getCableJacketTexture();
-
-  // Dynamic high-DPI monochrome OLED canvas texture (1024x566 matching 2.50 x 1.38 aspect)
-  const oledCanvas = document.createElement('canvas');
-  oledCanvas.width = 1024;
-  oledCanvas.height = 566;
-  const oledCtx = oledCanvas.getContext('2d');
-  const oledTex = new THREE.CanvasTexture(oledCanvas);
-  oledTex.flipY = false; // Match Blender glTF UV orientation
-  oledTex.colorSpace = THREE.SRGBColorSpace;
-  oledTex.anisotropy = 16;
-  oledTex.minFilter = THREE.LinearMipmapLinearFilter;
-  oledTex.magFilter = THREE.LinearFilter;
-
-  // Subtle meter chassis top-face silkscreen micro-labels (IN / OUT) via a thin decal plane
-  const chassisDecalCanvas = document.createElement('canvas');
-  chassisDecalCanvas.width = 1024;
-  chassisDecalCanvas.height = 640;
-  const cdCtx = chassisDecalCanvas.getContext('2d');
-  cdCtx.clearRect(0, 0, 1024, 640);
-  cdCtx.fillStyle = 'rgba(218, 215, 208, 0.44)';
-  cdCtx.font = '500 20px "JetBrains Mono", monospace';
-  cdCtx.textAlign = 'left';
-  cdCtx.textBaseline = 'middle';
-  cdCtx.fillText('IN', 24, 320);
-  cdCtx.textAlign = 'right';
-  cdCtx.fillText('OUT', 1000, 320);
-  cdCtx.textAlign = 'center';
-  cdCtx.font = '400 14px "JetBrains Mono", monospace';
-  cdCtx.fillStyle = 'rgba(218, 215, 208, 0.30)';
-  cdCtx.fillText('MCP-PD1  ·  5–20V INLINE', 512, 608);
-  const chassisDecalTex = new THREE.CanvasTexture(chassisDecalCanvas);
-  chassisDecalTex.colorSpace = THREE.SRGBColorSpace;
-  chassisDecalTex.anisotropy = 8;
-
-  const chassisDecal = new THREE.Mesh(
-    new THREE.PlaneGeometry(3.12, 1.92),
-    new THREE.MeshBasicMaterial({ map: chassisDecalTex, transparent: true, depthWrite: false })
-  );
-  chassisDecal.rotation.x = -Math.PI / 2;
-  chassisDecal.position.set(0, 0.648, 0);
-  scene.add(chassisDecal);
-
-  let rightPlugRoot = null;
-  let oledMaterial = null;
-
-  root.traverse((obj) => {
-    if (obj.name === 'RightPlugRoot') rightPlugRoot = obj;
-    if (!obj.isMesh) return;
-    obj.castShadow = true;
-    obj.receiveShadow = true;
-
-    const matName = obj.material?.name || '';
-    if (matName === 'MeterMatteBlack') {
-      obj.material = new THREE.MeshPhysicalMaterial({
-        color: 0x252627,
-        metalness: 0.04,
-        roughness: 0.88,
-        roughnessMap: anodizedTex,
-        bumpMap: anodizedTex,
-        bumpScale: 0.0028,
-        clearcoat: 0.0,
-      });
-    } else if (matName === 'MeterDarkSeam' || matName === 'USBC_Cavity') {
-      obj.material = new THREE.MeshStandardMaterial({
-        color: 0x09090b,
-        metalness: 0.05,
-        roughness: 0.85,
-      });
-    } else if (matName === 'MeterBezel') {
-      obj.material = new THREE.MeshPhysicalMaterial({
-        color: 0x0b0c0e,
-        metalness: 0.12,
-        roughness: 0.50,
-        clearcoat: 0.12,
-        clearcoatRoughness: 0.18,
-      });
-    } else if (matName === 'OledScreenMat') {
-      oledMaterial = new THREE.MeshBasicMaterial({ map: oledTex });
-      obj.material = oledMaterial;
-      obj.castShadow = false;
-    } else if (matName === 'OledCoverGlass') {
-      obj.material = new THREE.MeshPhysicalMaterial({
-        color: 0x05070a,
-        metalness: 0.0,
-        roughness: 0.32,
-        transparent: true,
-        opacity: 0.055,
-        clearcoat: 0.10,
-        clearcoatRoughness: 0.06,
-        reflectivity: 0.18,
-        envMapIntensity: 0.24,
-        depthWrite: false,
-      });
-      obj.castShadow = false;
-    } else if (matName === 'USBC_Stainless') {
-      obj.material = new THREE.MeshStandardMaterial({
-        color: 0xd4d8de,
-        metalness: 0.96,
-        roughness: 0.22,
-        envMapIntensity: 1.2,
-      });
-    } else if (matName === 'CablePaleGreyOvermold' || matName === 'CablePaleGreyStrain' || matName === 'CablePaleGreyJacket') {
-      const isStrain = matName === 'CablePaleGreyStrain';
-      obj.material = new THREE.MeshPhysicalMaterial({
-        color: isStrain ? 0x202020 : 0xe6e5df,
-        metalness: 0.0,
-        roughness: isStrain ? 0.78 : 0.72,
-        roughnessMap: cableTex,
-        bumpMap: cableTex,
-        bumpScale: 0.0014,
-        sheen: 0.12,
-        sheenRoughness: 0.8,
-        sheenColor: new THREE.Color(0xeae7e0),
-      });
-    } else if (matName === 'MicroButton') {
-      obj.material = new THREE.MeshStandardMaterial({
-        color: 0x26282e,
-        metalness: 0.55,
-        roughness: 0.36,
-      });
-    }
-  });
-
-  // Grounded AO contact shadows under meter & cables
-  const meterAo = createContactShadow(3.95, 2.65, theme === 'dark' ? 0.68 : 0.32, 0.002);
-  scene.add(meterAo);
-
-  const leftPlugAo = createContactShadow(2.4, 0.95, theme === 'dark' ? 0.48 : 0.22, 0.002);
-  leftPlugAo.position.set(-2.6, 0.002, 0);
-  scene.add(leftPlugAo);
-
-  const rightPlugAo = createContactShadow(2.4, 0.95, theme === 'dark' ? 0.48 : 0.22, 0.002);
-  rightPlugAo.position.set(2.6, 0.002, 0);
-  scene.add(rightPlugAo);
-
-  // Keep a non-glare dummy handle (avoids specular circle hotspot on OledGlass)
-  const screenGlowLight = { intensity: 0 };
-
-  // Invisible generous hit box over the right-hand plug + cable for easy drag/click
-  const hitPlug = new THREE.Mesh(
-    new THREE.BoxGeometry(3.8, 1.1, 1.8),
-    new THREE.MeshBasicMaterial({ visible: false })
-  );
-  hitPlug.position.set(2.8, 0.35, 0);
-  scene.add(hitPlug);
-
-  // State machine
-  let isPlugged = Boolean(startSettled);
-  let plugX = isPlugged ? 0.0 : UNPLUGGED_X;
-  let plugVel = 0.0;
-  let hasNegotiatedOnce = Boolean(startSettled);
-  let phase = isPlugged ? 'locked' : 'off'; // 'off' | 'negotiating' | 'locked'
-  let negotiationStart = 0;
-  let lastStepIdx = -1;
-  let currentWords = phraseStore.getState().cleanWords;
-  let oledDirty = true;
-
-  function drawPixelGrid(ctx, w, h) {
-    ctx.save();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.48)';
-    for (let y = 0; y < h; y += 6) {
-      ctx.fillRect(0, y, w, 1);
-    }
-    for (let x = 0; x < w; x += 6) {
-      ctx.fillRect(x, 0, 1, h);
-    }
-    ctx.restore();
+// Rasterise the current glyphs into physical emitters. Glass reflections remain
+// visible through the unlit pixels, including inside the counters of letters.
+function displayPixels(lines) {
+  const stencil = document.createElement('canvas');
+  stencil.width = 148;
+  stencil.height = 56;
+  const ink = stencil.getContext('2d', {willReadFrequently:true});
+  ink.textBaseline = 'middle';
+  ink.fillStyle = '#fff';
+  const longest = Math.max(...lines.map(line => line.length), 1);
+  const size = Math.min(lines.length === 1 ? 22 : 19, 211/longest);
+  ink.font = '650 ' + size + 'px ' + mono;
+  lines.forEach((line,i) => ink.fillText(line, 4, lines.length === 1 ? 28 : 9 + i * 18.3));
+  const alpha = ink.getImageData(0,0,148,56).data;
+  const glass = document.createElement('canvas');
+  glass.width = 592; glass.height = 224;
+  const out = glass.getContext('2d');
+  out.fillStyle = '#e7f5e9';
+  for (let y=0;y<56;y++) for (let x=0;x<148;x++) {
+    const emission = alpha[(y*148+x)*4+3] / 255;
+    if (emission < .16) continue;
+    out.globalAlpha = Math.min(1, emission*1.25);
+    out.fillRect(4*x,4*y,3.35,3.35);
   }
-
-  function drawOled() {
-    const status = phase === 'locked' ? currentWords.join(' ') :
-      phase === 'off' ? 'Disconnected' : NEGOTIATION_STEPS[lastStepIdx].mode === 'ok' ?
-        'CONTRACT OK' : NEGOTIATION_STEPS[lastStepIdx].volts + 'V';
-    canvas.setAttribute('aria-label', 'The Contract · ' + status);
-    const ctx = oledCtx;
-    const w = oledCanvas.width;
-    const h = oledCanvas.height;
-
-    // Broad reflected diffusion cloth stays on the glass when the emitter sleeps.
-    const glass = ctx.createLinearGradient(0, 0, w, h * .8);
-    glass.addColorStop(0, '#25292a');
-    glass.addColorStop(.34, '#171a1c');
-    glass.addColorStop(.52, '#111416');
-    glass.addColorStop(.58, '#090b0e');
-    glass.addColorStop(1, '#050608');
-    ctx.fillStyle = glass;
-    ctx.fillRect(0, 0, w, h);
-
-    if (phase === 'off') {
-      drawPixelGrid(ctx, w, h);
-      oledTex.needsUpdate = true;
-      screenGlowLight.intensity = 0.0;
-      oledDirty = false;
-      return;
-    }
-
-    const fg = '#EAF4FF';
-    const fgSoft = 'rgba(234, 244, 255, 0.56)';
-    const rule = 'rgba(234, 244, 255, 0.20)';
-
-    ctx.save();
-    ctx.shadowColor = 'rgba(195, 228, 255, 0.42)';
-    ctx.shadowBlur = 2;
-
-    // Top status strip (authentic inline PD meter header)
-    ctx.fillStyle = fgSoft;
-    ctx.font = '500 28px "JetBrains Mono", ui-monospace, monospace';
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'left';
-
-    if (phase === 'negotiating') {
-      const step = NEGOTIATION_STEPS[Math.max(0, Math.min(lastStepIdx, NEGOTIATION_STEPS.length - 1))];
-      ctx.fillText('USB-PD', 44, 52);
-      ctx.textAlign = 'right';
-      ctx.fillText(step.pdo, w - 44, 52);
-
-      // Hairline divider
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = rule;
-      ctx.fillRect(44, 86, w - 88, 2);
-      ctx.shadowBlur = 2;
-
-      if (step.mode === 'pd') {
-        // Dry V / A / W negotiation readout
-        const rows = [
-          { val: step.volts, unit: 'V', active: true },
-          { val: '0.000', unit: 'A', active: false },
-          { val: '0.000', unit: 'W', active: false },
-        ];
-        rows.forEach((r, idx) => {
-          const cy = 178 + idx * 130;
-          ctx.fillStyle = r.active ? fg : 'rgba(234, 244, 255, 0.34)';
-          ctx.font = '500 94px "JetBrains Mono", ui-monospace, monospace';
-          ctx.textAlign = 'left';
-          ctx.fillText(r.val, 46, cy);
-          ctx.font = '500 48px "JetBrains Mono", ui-monospace, monospace';
-          ctx.textAlign = 'right';
-          ctx.fillStyle = r.active ? fgSoft : 'rgba(234, 244, 255, 0.24)';
-          ctx.fillText(r.unit, w - 46, cy + 8);
-        });
-      } else {
-        // Brief dry CONTRACT OK lock frame
-        ctx.fillStyle = fg;
-        ctx.fillRect(44, 210, w - 88, 128);
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#050608';
-        ctx.font = '600 66px "JetBrains Mono", ui-monospace, monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('CONTRACT OK', w / 2, 276);
-        ctx.shadowBlur = 8;
-        ctx.fillStyle = fgSoft;
-        ctx.font = '500 30px "JetBrains Mono", ui-monospace, monospace';
-        ctx.fillText('20.00V  ·  FIXED PDO', w / 2, 412);
-      }
-      screenGlowLight.intensity = 0.26;
-    } else if (phase === 'locked') {
-      // Top restrained header
-      ctx.fillText('20.00V', 44, 50);
-      ctx.textAlign = 'right';
-      ctx.fillText('PD 3.0', w - 44, 50);
-
-      // Hairline divider
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = rule;
-      ctx.fillRect(44, 82, w - 88, 2);
-      ctx.shadowBlur = 2;
-
-      // Exact 3-line V / A / W meter layout, locked to the 3 MCP words
-      const units = ['V', 'A', 'W'];
-      const maxWordWidth = w - 190; // Leave generous right column for unit indicator
-      const upperWords = currentWords.map((word) => word.replace(/,$/, '').toUpperCase());
-
-      // Uniform optical font size across all 3 rows so the meter feels genuinely calibrated
-      let fontSize = 118;
-      while (fontSize > 46) {
-        ctx.font = `500 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
-        const widest = Math.max(...upperWords.map((txt) => ctx.measureText(txt).width));
-        if (widest <= maxWordWidth) break;
-        fontSize -= 4;
-      }
-
-      upperWords.forEach((word, idx) => {
-        const cy = 178 + idx * 134;
-
-        // Subtle horizontal micro-rule separating rows like a bench instrument
-        if (idx > 0) {
-          ctx.save();
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = 'rgba(234, 244, 255, 0.08)';
-          ctx.fillRect(44, cy - 67, w - 88, 1);
-          ctx.restore();
-        }
-
-        ctx.fillStyle = fg;
-        ctx.font = `500 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
-        ctx.textAlign = 'left';
-        ctx.fillText(word, 46, cy);
-
-        // Right-aligned single-letter unit tag where V / A / W normally sit
-        ctx.fillStyle = fgSoft;
-        ctx.font = '500 44px "JetBrains Mono", ui-monospace, monospace';
-        ctx.textAlign = 'right';
-        ctx.fillText(units[idx], w - 46, cy + 6);
-      });
-
-      screenGlowLight.intensity = 0.34;
-    }
-
-    ctx.restore();
-    drawPixelGrid(ctx, w, h);
-    oledTex.needsUpdate = true;
-    oledDirty = false;
-  }
-
-  function startNegotiation({ advancePhrase = false } = {}) {
-    if (advancePhrase) {
-      phraseStore.nextRandom({ source: 'the-contract' });
-    }
-    const st = phraseStore.getState();
-    currentWords = st.cleanWords;
-    phase = 'negotiating';
-    negotiationStart = performance.now();
-    lastStepIdx = 0;
-    hasNegotiatedOnce = true;
+  return glass;
+}
+export async function createInstrument({canvas, phraseStore, startSettled}) {
+  const plate = await photograph(canvas,'the-contract');
+  const {ctx,crop} = plate;
+  let seated = startSettled, hasContract = startSettled;
+  let offset = seated ? 0 : 120, velocity = 0;
+  let started = null, dirty = true, drag = null;
+  let status, pixels;
+  function plug() {
+    if (seated) return;
+    seated = true;
+    if (hasContract) phraseStore.nextRandom({source:'the-contract'});
+    hasContract = true;
+    started = performance.now();
     sound.playUsbPlug();
-    oledDirty = true;
+    dirty = true;
   }
-
-  function seatPlug({ advanceIfReplug = true } = {}) {
-    if (isPlugged && phase !== 'off') return;
-    isPlugged = true;
-    const shouldAdvance = advanceIfReplug && hasNegotiatedOnce;
-    startNegotiation({ advancePhrase: shouldAdvance });
-  }
-
-  function unplugPlug() {
-    if (!isPlugged) return;
-    isPlugged = false;
-    phase = 'off';
-    negotiationStart = performance.now();
-    lastStepIdx = -1;
+  function unplug() {
+    if (!seated) return;
+    seated = false;
+    started = null;
     sound.playUsbUnplug();
-    oledDirty = true;
+    dirty = true;
   }
-
-  // Pointer drag + click with magnetic snap
-  let isDragging = false;
-  let dragStartClientX = 0;
-  let dragStartPlugX = 0;
-  let dragMoved = false;
-
-  const raycaster = new THREE.Raycaster();
-  const pointerNdc = new THREE.Vector2();
-
-  function setPointer(e) {
+  function toggle() { seated ? unplug() : plug(); }
+  const controller = new AbortController();
+  const listen = (event,cb) => canvas.addEventListener(event,cb,{signal:controller.signal});
+  canvas.style.cursor = 'grab';
+  listen('pointerdown', e => {
     const rect = canvas.getBoundingClientRect();
-    pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    pointerNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-  }
-
-  function onPointerDown(e) {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
-    setPointer(e);
-    raycaster.setFromCamera(pointerNdc, camera);
-    const hits = raycaster.intersectObject(hitPlug, false);
-    const onRightHalf = pointerNdc.x > -0.15;
-    if (!hits.length && !onRightHalf) return;
-
-    e.preventDefault();
-    canvas.setPointerCapture?.(e.pointerId);
-    isDragging = true;
-    dragMoved = false;
-    dragStartClientX = e.clientX;
-    dragStartPlugX = plugX;
-    plugVel = 0;
-    canvas.style.cursor = 'grabbing';
-  }
-
-  function onPointerMove(e) {
-    if (!isDragging) {
-      setPointer(e);
-      raycaster.setFromCamera(pointerNdc, camera);
-      const hits = raycaster.intersectObject(hitPlug, false);
-      canvas.style.cursor = hits.length ? 'grab' : 'default';
-      return;
+    if (!e.isPrimary || e.button !== 0 || (e.clientX-rect.left)/rect.width < .45) return;
+    drag = {x:e.clientX, offset, moved:false, snapped:false};
+    canvas.setPointerCapture(e.pointerId);
+    canvas.style.cursor='grabbing';
+  });
+  listen('pointermove', e => {
+    if (!drag || drag.snapped) return;
+    const dx=(e.clientX-drag.x)/canvas.clientWidth*1000;
+    if (Math.abs(dx) < 7 && !drag.moved) return;
+    drag.moved = true;
+    offset = clamp(drag.offset+dx,0,135);
+    if (seated && offset>38) unplug();
+    if (!seated && offset < 22) { plug(); drag.snapped=true; }
+  });
+  function release(e) {
+    if (!drag) return;
+    if (e.type !== 'pointercancel' && !drag.snapped) {
+      if (!drag.moved) toggle();
+      else if (offset<55) plug();
+      else unplug();
     }
-
-    const rect = canvas.getBoundingClientRect();
-    const dx = e.clientX - dragStartClientX;
-    if (Math.abs(dx) > 6) dragMoved = true;
-
-    const worldDx = (dx / rect.width) * 3.8;
-    const rawX = Math.max(0.0, Math.min(UNPLUGGED_X * 1.15, dragStartPlugX + worldDx));
-
-    // Tactile magnetic pull when approaching socket
-    if (!isPlugged && rawX < 0.24) {
-      plugX = 0.0;
-      seatPlug({ advanceIfReplug: true });
-      isDragging = false;
-      canvas.releasePointerCapture?.(e.pointerId);
-      canvas.style.cursor = 'grab';
-      return;
-    }
-
-    if (isPlugged && rawX > 0.32) {
-      unplugPlug();
-    }
-    plugX = rawX;
+    drag=null;
+    canvas.style.cursor='grab';
   }
+  listen('pointerup',release);
+  listen('pointercancel',release);
 
-  function onPointerUp(e) {
-    if (!isDragging) return;
-    isDragging = false;
-    canvas.releasePointerCapture?.(e.pointerId);
-    canvas.style.cursor = 'grab';
-    if (e.type === 'pointercancel') return;
-
-    if (!dragMoved) {
-      // Crisp single click toggles plug / unplug
-      if (isPlugged) unplugPlug();
-      else seatPlug({ advanceIfReplug: true });
-    } else {
-      // Magnetic snap threshold on release
-      if (plugX <= MAGNETIC_SNAP_X) {
-        if (!isPlugged) seatPlug({ advanceIfReplug: true });
-      } else {
-        if (isPlugged) unplugPlug();
+  function draw(dt) {
+    if (!drag || drag.snapped) {
+      const goal = seated ? 0 : 120;
+      const h = Math.min(.025,dt);
+      velocity += ((goal-offset)*340-velocity*28)*h;
+      offset = clamp(offset+velocity*h,0,140);
+      if (Math.abs(goal-offset)<.1 && Math.abs(velocity)<1) { offset=goal; velocity=0; }
+    }
+    plate.begin();
+    if (offset>.05) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(817,428,183,151); ctx.clip();
+      // Expose the stone under the plug; feather the edge of its contact shadow.
+      for (let y=428; y<579; y+=2) {
+        const alpha=clamp(Math.min((y-428)/14,(579-y)/20));
+        ctx.globalAlpha=alpha;
+        crop(817,408-Math.abs((y-428)%48-24),183,2,817,y,183,2);
       }
+      ctx.globalAlpha=1;
+      const metal=ctx.createLinearGradient(0,473,0,526);
+      metal.addColorStop(0,'#595852'); metal.addColorStop(.13,'#e5e3d7');
+      metal.addColorStop(.37,'#c0bfb7'); metal.addColorStop(.85,'#827e74'); metal.addColorStop(1,'#34322e');
+      ctx.fillStyle=metal;
+      ctx.beginPath(); ctx.roundRect(817+offset-46,473,50,49,4); ctx.fill();
+      ctx.fillStyle='#555149'; ctx.fillRect(817+offset-34,478,7,3);
+      ctx.fillRect(817+offset-34,514,7,3);
+      ctx.beginPath();
+      ctx.moveTo(817+offset,440); ctx.lineTo(844+offset,453); ctx.lineTo(905+offset,462);
+      ctx.lineTo(905+offset,476); ctx.lineTo(1000+offset,476); ctx.lineTo(1000+offset,521);
+      ctx.lineTo(905+offset,521);ctx.lineTo(905+offset,534);ctx.lineTo(845+offset,543);
+      ctx.lineTo(817+offset,560);ctx.closePath();ctx.clip();
+      crop(817,430,183,135,817+offset,430);
+      ctx.restore();
     }
+    const elapsed = started === null ? 0 : performance.now()-started;
+    const index = until.findIndex(end=>elapsed<end);
+    if (started !== null && index<0) started=null;
+    const words = phraseStore.getState().cleanWords;
+    const nextStatus = !seated ? 'Disconnected' : started !== null ? readings[index] : words.join(' ');
+    if (nextStatus !== status) {
+      if (started !== null && status !== 'Disconnected') sound.playRelayTick(.92+index*.12,.12);
+      status=nextStatus;
+      canvas.setAttribute('aria-label','The Contract · '+status);
+      pixels = !seated ? null : displayPixels(started !== null ? [status] : words.map(w=>w.toUpperCase()));
+    }
+    if (pixels) {
+      ctx.save();
+      ctx.shadowColor='rgba(191,250,215,.34)'; ctx.shadowBlur=1.8;
+      ctx.drawImage(pixels,257,400,486,183);
+      ctx.restore();
+    }
+    dirty=false;
   }
-
-  canvas.addEventListener('pointerdown', onPointerDown);
-  canvas.addEventListener('pointermove', onPointerMove);
-  canvas.addEventListener('pointerup', onPointerUp);
-  canvas.addEventListener('pointercancel', onPointerUp);
-
-  let currentTheme = theme;
-
-  function stepAnimation(dt) {
-    // Spring-snap right plug position toward target (0.0 seated or UNPLUGGED_X poised)
-    if (!isDragging) {
-      const targetX = isPlugged ? 0.0 : UNPLUGGED_X;
-      const stiffness = isPlugged ? 340 : 190;
-      const damping = isPlugged ? 26 : 22;
-      const force = (targetX - plugX) * stiffness - plugVel * damping;
-      plugVel += force * dt;
-      plugX += plugVel * dt;
-      if (Math.abs(targetX - plugX) < 0.001 && Math.abs(plugVel) < 0.005) {
-        plugX = targetX;
-        plugVel = 0;
-      }
-      if (plugX < 0) {
-        plugX = 0;
-        plugVel = 0;
-      }
-    }
-
-    if (rightPlugRoot) {
-      rightPlugRoot.position.x = plugX;
-    }
-    rightPlugAo.position.x = 2.6 + plugX;
-    hitPlug.position.x = 2.6 + plugX;
-
-    // Step USB-PD negotiation sequence (< 1.5s)
-    if (phase === 'negotiating') {
-      const negElapsed = (performance.now() - negotiationStart) / 1000;
-      let stepIdx = NEGOTIATION_STEPS.findIndex((s) => negElapsed < s.until);
-      if (stepIdx === -1) {
-        phase = 'locked';
-        sound.playRelayTick(1.55, 0.16);
-        oledDirty = true;
-      } else if (stepIdx !== lastStepIdx) {
-        lastStepIdx = stepIdx;
-        sound.playRelayTick(NEGOTIATION_STEPS[stepIdx].pitch, 0.12);
-        oledDirty = true;
-      }
-    }
-
-    if (oledDirty) {
-      drawOled();
-    }
-  }
-
-  // Initial draw
-  if (rightPlugRoot) rightPlugRoot.position.x = plugX;
-  rightPlugAo.position.x = 2.6 + plugX;
-  hitPlug.position.x = 2.6 + plugX;
-  drawOled();
-
-  if (onReady) onReady();
-
   return {
-    setPhrase(state, meta = {}) {
-      currentWords = state.cleanWords;
-      if (meta.source === 'the-contract') return;
-      if (isPlugged) {
-        phase = 'locked';
-        oledDirty = true;
-      }
+    render:draw, triggerPrimary:toggle, setTheme(){},
+    setPhrase(){ dirty=true; }, setSettled(value){
+      seated=hasContract=value; offset=value?0:120; started=null; velocity=0; dirty=true;
     },
-
-    setTheme(nextTheme) {
-      currentTheme = nextTheme;
-      applyStudioTheme(nextTheme);
-      meterAo.material.opacity = nextTheme === 'dark' ? 0.68 : 0.34;
-      leftPlugAo.material.opacity = nextTheme === 'dark' ? 0.48 : 0.22;
-      rightPlugAo.material.opacity = nextTheme === 'dark' ? 0.48 : 0.22;
-    },
-
-    /** Space bar: plug in if unplugged, unplug if plugged in */
-    triggerPrimary() {
-      if (isPlugged) unplugPlug();
-      else seatPlug({ advanceIfReplug: true });
-    },
-
-    /** Helper for deep-link / still settling */
-    setSettled(settled) {
-      isPlugged = Boolean(settled);
-      plugX = isPlugged ? 0.0 : UNPLUGGED_X;
-      plugVel = 0;
-      phase = isPlugged ? 'locked' : 'off';
-      hasNegotiatedOnce = isPlugged;
-      oledDirty = true;
-    },
-
-    isMoving() {
-      return Boolean(phase === 'negotiating' || isDragging || oledDirty || plugX !== (isPlugged ? 0 : UNPLUGGED_X));
-    },
-
-    render(dt) {
-      stepAnimation(Math.min(dt, 0.05));
-      studio.renderToCanvas(scene, camera, canvas, currentTheme);
-    },
-
-    resize() {
-      camera.aspect = 1;
-      camera.updateProjectionMatrix();
-    },
-
-    dispose() {
-      canvas.removeEventListener('pointerdown', onPointerDown);
-      canvas.removeEventListener('pointermove', onPointerMove);
-      canvas.removeEventListener('pointerup', onPointerUp);
-      canvas.removeEventListener('pointercancel', onPointerUp);
-      oledTex.dispose();
-      chassisDecalTex.dispose();
-      scene.userData.movingPlates.light.dispose();
-      scene.userData.movingPlates.dark.dispose();
-      scene.userData.plates.light.dispose();
-      scene.userData.plates.dark.dispose();
-      scene.traverse((obj) => {
-        obj.shadow?.dispose();
-        if (obj.geometry) obj.geometry.dispose();
-        if (obj.material) {
-          if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
-          else obj.material.dispose();
-        }
-      });
-    },
+    isMoving:()=>dirty || !!drag || started !== null || offset !== (seated?0:120),
+    dispose(){controller.abort();}
   };
 }
