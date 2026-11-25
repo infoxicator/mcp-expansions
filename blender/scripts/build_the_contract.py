@@ -56,6 +56,49 @@ def add_beveled_box(name, size, location, bevel_width=0.04, segments=4, mat=None
     return obj
 
 
+def molded_shell(name, size, center, radius, lip, material):
+    width, depth, height = size
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    vertices, faces = [], []
+    profiles = [(-height/2, lip), (-height/2 + lip*.28, lip*.30),
+                (-height/2 + lip, 0), (height/2 - lip, 0),
+                (height/2 - lip*.28, lip*.30), (height/2, lip)]
+    for z, inset in profiles:
+        for corner, (sx, sy) in enumerate([(1,1), (-1,1), (-1,-1), (1,-1)]):
+            for n in range(13):
+                angle = (corner + n/12) * math.pi/2
+                vertices.append((sx*(width/2-radius) + (radius-inset)*math.cos(angle),
+                                 sy*(depth/2-radius) + (radius-inset)*math.sin(angle), z))
+    count = 52
+    faces.append(tuple(reversed(range(count))))
+    for level in range(len(profiles)-1):
+        for n in range(count):
+            a = level*count + n
+            b = level*count + (n+1)%count
+            faces.append((a,b,b+count,a+count))
+    faces.append(tuple(range(len(vertices)-count,len(vertices))))
+    mesh.from_pydata(vertices, [], faces)
+    mesh.update()
+    obj.location = center
+    set_smooth(obj)
+    obj.data.materials.append(material)
+    return obj
+
+
+def cover_screw(x, y, metal, recess):
+    # The socket and annular face are concentric at this scale.
+    for name, radius, z, sides, material in [
+            ("Boss", .067, .646, 40, recess), ("Fastener", .052, .650, 40, metal),
+            ("Socket", .024, .653, 6, recess)]:
+        bpy.ops.mesh.primitive_cylinder_add(vertices=sides, radius=radius, depth=.004,
+                                            location=(x,y,z))
+        obj = bpy.context.object
+        obj.name = name
+        obj.data.materials.append(material)
+
+
 def add_stadium_extrude_x(name, length_x, width_y, height_z, location, end_bevel=0.015, mat=None, parent=None):
     """Create a smooth rounded-stadium (pill cross-section in Y-Z) extruded along X with clean chamfered ends."""
     mesh = bpy.data.meshes.new(name)
@@ -107,6 +150,7 @@ def add_stadium_extrude_x(name, length_x, width_y, height_z, location, end_bevel
     # Clean end caps
     bm.faces.new(list(reversed(rings[0])))
     bm.faces.new(rings[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
     bm.normal_update()
 
     bm.to_mesh(mesh)
@@ -200,17 +244,12 @@ def add_plug_and_cable(prefix, direction, base_x, z_mid, mat_overmold, mat_strai
         parent=parent,
     )
 
-    # Subtle recessed grip pill on top of overmold
-    add_stadium_extrude_x(
-        f"{prefix}_GripPad",
-        length_x=0.38,
-        width_y=0.36,
-        height_z=0.025,
-        location=(overmold_x + direction * 0.04, 0.0, z_mid + 0.175),
-        end_bevel=0.008,
-        mat=mat_strain,
-        parent=parent,
-    )
+    # Fine grip flutes molded into the thumb end, continuous with the overmold.
+    for i in range(4):
+        ridge = molded_shell(f"{prefix}_Grip_{i}", (.033, .27, .013),
+                             (overmold_x + direction * (.16 + .052*i), 0, z_mid+.173),
+                             .015, .004, mat_overmold)
+        ridge.parent = parent
 
     # Stepped strain-relief ribs (4 crisp tapered rings)
     rib_start = base_x + direction * (overmold_len + 0.03)
@@ -303,22 +342,25 @@ def build():
     z_mid = 0.33
 
     # Main upper & lower halves with a delicate real CNC parting seam
-    add_beveled_box("MeterLower", (meter_w, meter_d, 0.28), (0.0, 0.0, 0.16), bevel_width=0.045, segments=4, mat=mat_meter_body)
-    add_beveled_box("MeterSeamCore", (meter_w - 0.03, meter_d - 0.03, 0.05), (0.0, 0.0, 0.305), bevel_width=0.01, segments=2, mat=mat_meter_seam)
-    add_beveled_box("MeterUpper", (meter_w, meter_d, 0.33), (0.0, 0.0, 0.48), bevel_width=0.052, segments=5, mat=mat_meter_body)
+    molded_shell("MeterLower", (meter_w-.025, meter_d-.025, .23), (0,0,.135), .19, .045, mat_meter_body)
+    molded_shell("MeterSeamCore", (meter_w-.040, meter_d-.040, .018), (0,0,.259), .18, .005, mat_meter_seam)
+    molded_shell("MeterUpper", (meter_w, meter_d, .378), (0,0,.457), .195, .046, mat_meter_body)
+    for x in [-1.43, 1.43]:
+        for y in [-.82, .82]:
+            cover_screw(x, y, mat_button, mat_port_dark)
 
     # Subtle bottom rubber feet rails
     add_beveled_box("FootRail_F", (2.60, 0.14, 0.024), (0.0, -0.78, 0.012), bevel_width=0.008, segments=2, mat=mat_meter_seam)
     add_beveled_box("FootRail_B", (2.60, 0.14, 0.024), (0.0, 0.78, 0.012), bevel_width=0.008, segments=2, mat=mat_meter_seam)
 
     # Recessed glossy black bezel surround on top face
-    add_beveled_box("OledBezel", (2.78, 1.60, 0.036), (0.0, 0.0, 0.635), bevel_width=0.014, segments=3, mat=mat_bezel)
+    molded_shell("OledBezel", (2.78, 1.60, .036), (0, 0, .635), .11, .012, mat_bezel)
 
     # Monochrome OLED active emitter quad (UV-mapped 0..1)
     add_oled_quad("OledScreen", width_x=2.50, height_y=1.38, z_pos=0.654, mat=mat_oled)
 
     # Thin protective smoked glass cover above OLED
-    add_beveled_box("OledGlass", (2.68, 1.50, 0.010), (0.0, 0.0, 0.660), bevel_width=0.004, segments=2, mat=mat_glass)
+    molded_shell("OledGlass", (2.68, 1.50, .010), (0, 0, .660), .078, .003, mat_glass)
 
     # Two subtle micro tactile buttons along the top back edge (like Power-Z / FNB meters)
     add_beveled_box("Btn_Back", (0.28, 0.07, 0.11), (-0.72, 1.02, 0.36), bevel_width=0.015, segments=2, mat=mat_button)

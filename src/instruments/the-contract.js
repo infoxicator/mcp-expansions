@@ -17,9 +17,9 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
   // Product-photography macro flat-lay framing: matchbox meter centered (~44% width) flanked by both pale grey USB-C plugs & cables
   const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 45);
-  camera.position.set(1.50, 11.55, 4.35);
+  camera.position.set(1.40, 13.55, 5.90);
   camera.lookAt(0.26, 0.28, 0.0);
-  camera.rotateZ(THREE.MathUtils.degToRad(-11));
+  camera.rotateZ(THREE.MathUtils.degToRad(1));
 
   const root = await studio.loadGLB('./assets/models/the-contract.glb');
   scene.add(root);
@@ -80,9 +80,9 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     const matName = obj.material?.name || '';
     if (matName === 'MeterMatteBlack') {
       obj.material = new THREE.MeshPhysicalMaterial({
-        color: 0x171719,
-        metalness: 0.14,
-        roughness: 0.68,
+        color: 0x252627,
+        metalness: 0.04,
+        roughness: 0.88,
         roughnessMap: anodizedTex,
         bumpMap: anodizedTex,
         bumpScale: 0.0028,
@@ -98,33 +98,25 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       obj.material = new THREE.MeshPhysicalMaterial({
         color: 0x0b0c0e,
         metalness: 0.12,
-        roughness: 0.28,
-        clearcoat: 0.35,
+        roughness: 0.50,
+        clearcoat: 0.12,
         clearcoatRoughness: 0.18,
       });
     } else if (matName === 'OledScreenMat') {
-      oledMaterial = new THREE.MeshStandardMaterial({
-        color: 0x020305,
-        map: oledTex,
-        emissive: 0xffffff,
-        emissiveMap: oledTex,
-        emissiveIntensity: 1.28,
-        roughness: 0.78,
-        metalness: 0.0,
-      });
+      oledMaterial = new THREE.MeshBasicMaterial({ map: oledTex });
       obj.material = oledMaterial;
       obj.castShadow = false;
     } else if (matName === 'OledCoverGlass') {
       obj.material = new THREE.MeshPhysicalMaterial({
         color: 0x05070a,
         metalness: 0.0,
-        roughness: 0.05,
+        roughness: 0.32,
         transparent: true,
         opacity: 0.055,
-        clearcoat: 0.75,
+        clearcoat: 0.10,
         clearcoatRoughness: 0.06,
-        reflectivity: 0.75,
-        envMapIntensity: 0.65,
+        reflectivity: 0.18,
+        envMapIntensity: 0.24,
         depthWrite: false,
       });
       obj.castShadow = false;
@@ -138,7 +130,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     } else if (matName === 'CablePaleGreyOvermold' || matName === 'CablePaleGreyStrain' || matName === 'CablePaleGreyJacket') {
       const isStrain = matName === 'CablePaleGreyStrain';
       obj.material = new THREE.MeshPhysicalMaterial({
-        color: isStrain ? 0xbab7b0 : 0xc9c6be,
+        color: isStrain ? 0xaeadac : 0xb9b9b7,
         metalness: 0.0,
         roughness: isStrain ? 0.68 : 0.56,
         roughnessMap: cableTex,
@@ -186,7 +178,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   let plugVel = 0.0;
   let hasNegotiatedOnce = Boolean(startSettled);
   let phase = isPlugged ? 'locked' : 'off'; // 'off' | 'negotiating' | 'locked'
-  let negElapsed = 0;
+  let negotiationStart = 0;
   let lastStepIdx = -1;
   let currentWords = phraseStore.getState().cleanWords;
   let currentIndexLabel = formatCatalog(phraseStore.getState());
@@ -210,6 +202,10 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
   }
 
   function drawOled() {
+    const status = phase === 'locked' ? currentWords.join(' ') :
+      phase === 'off' ? 'Disconnected' : NEGOTIATION_STEPS[lastStepIdx].mode === 'ok' ?
+        'CONTRACT OK' : NEGOTIATION_STEPS[lastStepIdx].volts + 'V';
+    canvas.setAttribute('aria-label', 'The Contract · ' + status);
     const ctx = oledCtx;
     const w = oledCanvas.width;
     const h = oledCanvas.height;
@@ -232,7 +228,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
     ctx.save();
     ctx.shadowColor = 'rgba(195, 228, 255, 0.42)';
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 2;
 
     // Top status strip (authentic inline PD meter header)
     ctx.fillStyle = fgSoft;
@@ -250,7 +246,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       ctx.shadowBlur = 0;
       ctx.fillStyle = rule;
       ctx.fillRect(44, 86, w - 88, 2);
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 2;
 
       if (step.mode === 'pd') {
         // Dry V / A / W negotiation readout
@@ -287,23 +283,23 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       screenGlowLight.intensity = 0.26;
     } else if (phase === 'locked') {
       // Top restrained header
-      ctx.fillText('PD 20.0V', 44, 50);
+      ctx.fillText('20.00V', 44, 50);
       ctx.textAlign = 'right';
-      ctx.fillText(`CONTRACT · ${currentIndexLabel}`, w - 44, 50);
+      ctx.fillText('PD 3.0', w - 44, 50);
 
       // Hairline divider
       ctx.shadowBlur = 0;
       ctx.fillStyle = rule;
       ctx.fillRect(44, 82, w - 88, 2);
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 2;
 
       // Exact 3-line V / A / W meter layout, locked to the 3 MCP words
-      const units = ['M', 'C', 'P'];
+      const units = ['V', 'A', 'W'];
       const maxWordWidth = w - 190; // Leave generous right column for unit indicator
       const upperWords = currentWords.map((word) => word.replace(/,$/, '').toUpperCase());
 
       // Uniform optical font size across all 3 rows so the meter feels genuinely calibrated
-      let fontSize = 104;
+      let fontSize = 118;
       while (fontSize > 46) {
         ctx.font = `500 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
         const widest = Math.max(...upperWords.map((txt) => ctx.measureText(txt).width));
@@ -352,7 +348,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     currentWords = st.cleanWords;
     currentIndexLabel = formatCatalog(st);
     phase = 'negotiating';
-    negElapsed = 0;
+    negotiationStart = performance.now();
     lastStepIdx = 0;
     hasNegotiatedOnce = true;
     sound.playUsbPlug();
@@ -370,7 +366,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     if (!isPlugged) return;
     isPlugged = false;
     phase = 'off';
-    negElapsed = 0;
+    negotiationStart = performance.now();
     lastStepIdx = -1;
     sound.playUsbUnplug();
     oledDirty = true;
@@ -495,7 +491,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
     // Step USB-PD negotiation sequence (< 1.5s)
     if (phase === 'negotiating') {
-      negElapsed += dt;
+      const negElapsed = (performance.now() - negotiationStart) / 1000;
       let stepIdx = NEGOTIATION_STEPS.findIndex((s) => negElapsed < s.until);
       if (stepIdx === -1) {
         phase = 'locked';
