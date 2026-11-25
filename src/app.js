@@ -66,7 +66,12 @@ class FeedApp {
     this.initTheme(params.get('theme'));
     this.fallbackReason = getFallbackReason();
 
-    await this.phraseStore.load();
+    await Promise.all([
+      this.phraseStore.load(),
+      document.fonts.load('500 16px "JetBrains Mono"'),
+      document.fonts.load('400 16px "Instrument Serif"'),
+      document.fonts.load('500 16px Inter'),
+    ]);
     this.phraseStore.initFromUrl();
 
     this.initialInstrumentId = params.get('i');
@@ -437,7 +442,7 @@ class FeedApp {
     this.isDrawerOpen = false;
     for (const region of [this.feedEl, this.railEl, this.indexToggle.closest('header')]) region.inert = false;
     this.indexDrawer.inert = true;
-    const trigger = this.drawerTrigger === document.body ? this.indexToggle : this.drawerTrigger;
+    const trigger = this.drawerTrigger === document.body ? this.feedEl : this.drawerTrigger;
     trigger?.focus({ preventScroll: true });
     this.indexDrawer.classList.remove('is-open');
     this.drawerBackdrop.classList.remove('is-open');
