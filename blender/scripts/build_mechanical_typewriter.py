@@ -357,7 +357,7 @@ def build():
     add_beveled_box("ShoulderLeft", (0.72, 1.88, 0.42), (-2.04, -0.44, 0.74), bevel_width=0.06, segments=3, mat=mat_chassis)
     add_beveled_box("ShoulderRight", (0.72, 1.88, 0.42), (2.04, -0.44, 0.74), bevel_width=0.06, segments=3, mat=mat_chassis)
     # Lower stepped front keyboard well housing the 3 round vintage M / C / P keys
-    add_beveled_box("KeyboardDeck", (4.54, 1.05, 0.36), (0.0, -1.78, 0.19), bevel_width=0.05, segments=3, mat=mat_chassis)
+    add_beveled_box("KeyboardDeck", (4.54, 2.14, 0.36), (0.0, -2.26, 0.19), bevel_width=0.12, segments=3, mat=mat_chassis)
     # Subtle front brushed-chrome trim rail separating upper cowl from key well
     add_beveled_box("FrontTrimBar", (4.42, 0.055, 0.048), (0.0, -1.32, 0.63), bevel_width=0.008, segments=2, mat=mat_chrome)
 
@@ -428,11 +428,37 @@ def build():
     add_beveled_box("RibbonGuideR", (0.05, 0.04, 0.24), (0.18, 0.02, 0.86), bevel_width=0.006, segments=1, mat=mat_chrome)
     add_beveled_box("InkRibbonStrip", (2.82, 0.012, 0.09), (0.0, -0.18, 0.78), bevel_width=0.002, segments=1, mat=mat_rubber)
 
-    # ── 3. Three Dedicated Iconic Concave Typewriter Keys (M, C, P) ──
-    key_xs = (-0.82, 0.0, 0.82)
-    for idx, kx in enumerate(key_xs):
-        mat_cap = make_material(f"TypeKeyCap{idx}", (0.08, 0.082, 0.088), metallic=0.12, roughness=0.45)
-        add_keycap(f"TypeKey{idx}", (kx, -1.80, 0.62), mat_chrome, mat_cap)
+    # Stepped keyboard. M, C and P have separate stems for the live action.
+    ivory = make_material('KeyEnamel', (.64,.61,.50), metallic=.03, roughness=.32)
+    ink = make_material('KeyInk', (.034,.031,.026), roughness=.55)
+    for row, keys in enumerate(["1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM,."]):
+        for column, letter in enumerate(keys):
+            x = (column-(len(keys)-1)/2)*.407 + [.0,-.035,.04,.09][row]
+            y = -1.48 - row*.395
+            z = .70 - row*.061
+            if letter in 'MCP':
+                idx = 'MCP'.index(letter)
+                cap = make_material(f"TypeKeyCap{idx}", (.055,.06,.055), roughness=.48)
+                root = add_keycap(f"TypeKey{idx}", (x,y,z), mat_chrome, cap)
+            else:
+                root = add_keycap(f"Key_{row}_{column}", (x,y,z), mat_chrome, ivory)
+                glyph = bpy.data.curves.new('Key legend','FONT')
+                glyph.body = letter
+                glyph.align_x, glyph.align_y = 'CENTER','CENTER'
+                glyph.size = .25
+                glyph.resolution_u = 4
+                label = bpy.data.objects.new(f'Legend_{row}_{column}', glyph)
+                bpy.context.collection.objects.link(label)
+                label.parent = root
+                label.location = (0,0,.069)
+                label.data.materials.append(ink)
+                bpy.context.view_layer.objects.active = label
+                label.select_set(True)
+                bpy.ops.object.convert(target='MESH')
+                label.select_set(False)
+            root.scale = (.73,.73,.85)
+    add_beveled_box("SpaceBar", (2.72,.26,.15), (0,-3.07,.46),
+                    bevel_width=.055, segments=5, mat=mat_rubber)
 
     # ── 4. Sliding Carriage Assembly (Platen + Knobs + Paper Bail + Paper Table + Paper Sheet) ──
     carriage_root = bpy.data.objects.new("CarriageRoot", None)

@@ -7,8 +7,8 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
 
   // Elevated 3/4 overhead studio macro framing the full typewriter deck, carriage knobs & cotton bond sheet
   const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 55);
-  camera.position.set(1.10, 12.55, 8.35);
-  camera.lookAt(0.0, 0.72, -0.35);
+  camera.position.set(1.10, 13.25, 8.95);
+  camera.lookAt(0.0, 0.72, 0.05);
   camera.rotateZ(THREE.MathUtils.degToRad(3));
 
   const root = await studio.loadGLB('./assets/models/mechanical-typewriter.glb');
@@ -204,7 +204,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
     // Uniform optical sizing so long phrases still sit cleanly inside the sheet
     let fontSize = 114;
     while (fontSize > 58) {
-      ctx.font = `600 ${fontSize}px "JetBrains Mono", "Courier New", ui-monospace, monospace`;
+      ctx.font = `600 ${fontSize}px "Courier New", Courier, monospace`;
       const widest = Math.max(...words.map((w) => ctx.measureText(w).width));
       if (widest <= 676) break;
       fontSize -= 4;
@@ -237,7 +237,7 @@ export async function createInstrument({ canvas, phraseStore, theme, startSettle
       if (shown.length > 0) {
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.font = `600 ${fontSize}px "JetBrains Mono", "Courier New", ui-monospace, monospace`;
+        ctx.font = `600 ${fontSize}px "Courier New", Courier, monospace`;
         ctx.fillStyle = 'rgba(18, 18, 20, 0.28)';
         ctx.fillText(shown, 229, y + 2);
         ctx.fillStyle = '#141416';
